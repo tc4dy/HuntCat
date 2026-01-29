@@ -1,0 +1,23 @@
+# Compiled binaries
+huntcat
+huntcat.exe
+*.exe
+
+# Generated reports
+huntcat_report.html
+huntcat_report.csv
+*.html
+*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Go workspace
+vendor/
