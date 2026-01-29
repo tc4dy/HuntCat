@@ -271,15 +271,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 - Special thanks to the Go community
 
 ---
-
-## 📞 **Support**
-
-- 🐛 [Report a Bug](https://github.com/yourusername/huntcat/issues)
-- 💡 [Request a Feature](https://github.com/yourusername/huntcat/issues)
-- 📧 Email: your-email@example.com
-
----
-
 <div align="center">
 
 **⭐ If you find HuntCat useful, please star this repository! ⭐**
