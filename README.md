@@ -96,7 +96,7 @@ go build -o huntcat huntcat.go
 
 ### **One-Liner Install (Unix/Linux/macOS)**
 ```bash
-curl -sSL https://raw.githubusercontent.com/yourusername/huntcat/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/tc4dy/HuntCat | bash
 ```
 
 ---
