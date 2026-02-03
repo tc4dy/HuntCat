@@ -80,8 +80,8 @@ Security Score    = HTTPS coverage + TLS compliance
 ### **Quick Install**
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/huntcat.git
-cd huntcat
+git clone https://github.com/tc4dy/HuntCat.git
+cd HuntCat
 
 # Initialize Go module
 go mod download
