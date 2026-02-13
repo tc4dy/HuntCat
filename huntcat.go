@@ -1,22 +1,26 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/csv"
+	"encoding/xml"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"regexp"
+	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"text/tabwriter"
 	"time"
 
-	"golang.org/x/net/html"
+	htmlparser "golang.org/x/net/html"
 )
 
 const (
@@ -33,19 +37,18 @@ const (
 )
 
 const (
-	colorReset      = "\033[0m"
-	colorRed        = "\033[31m"
-	colorGreen      = "\033[32m"
-	colorYellow     = "\033[33m"
-	colorBlue       = "\033[34m"
-	colorCyan       = "\033[36m"
-	colorWhite      = "\033[37m"
-	colorOrange     = "\033[38;5;208m"
-	colorBoldRed    = "\033[1;31m"
-	colorBoldGreen  = "\033[1;32m"
-	colorBoldCyan   = "\033[1;36m"
-	colorMagenta    = "\033[35m"
-	colorBoldYellow = "\033[1;33m"
+	colorReset     = "\033[0m"
+	colorRed       = "\033[31m"
+	colorGreen     = "\033[32m"
+	colorYellow    = "\033[33m"
+	colorBlue      = "\033[34m"
+	colorCyan      = "\033[36m"
+	colorWhite     = "\033[37m"
+	colorOrange    = "\033[38;5;208m"
+	colorBoldRed   = "\033[1;31m"
+	colorBoldGreen = "\033[1;32m"
+	colorBoldCyan  = "\033[1;36m"
+	colorMagenta   = "\033[35m"
 )
 
 type PageStatus struct {
@@ -110,6 +113,15 @@ type Crawler struct {
 	robotsMutex      sync.RWMutex
 	sitemapURLs      []string
 	sitemapMutex     sync.Mutex
+	robotsTxtRaw     string
+}
+
+type sitemapURL struct {
+	Loc string `xml:"loc"`
+}
+
+type sitemap struct {
+	URLs []sitemapURL `xml:"url"`
 }
 
 func NewCrawler(startURL string) (*Crawler, error) {
@@ -194,6 +206,8 @@ func (c *Crawler) fetchRobotsTxt() {
 		return
 	}
 
+	c.robotsTxtRaw = string(body)
+
 	lines := strings.Split(string(body), "\n")
 	userAgentMatch := false
 
@@ -202,7 +216,7 @@ func (c *Crawler) fetchRobotsTxt() {
 
 		if strings.HasPrefix(strings.ToLower(line), "user-agent:") {
 			agent := strings.TrimSpace(strings.TrimPrefix(strings.ToLower(line), "user-agent:"))
-			userAgentMatch = (agent == "*" || agent == "huntcat")
+			userAgentMatch = (agent == "*" || strings.Contains(agent, "mozilla") || agent == "huntcat")
 		}
 
 		if userAgentMatch && strings.HasPrefix(strings.ToLower(line), "disallow:") {
@@ -235,15 +249,10 @@ func (c *Crawler) isAllowedByRobots(urlPath string) bool {
 	c.robotsMutex.RLock()
 	defer c.robotsMutex.RUnlock()
 
-	if allowed, exists := c.robotsRules["*"]; exists && allowed {
-		return true
-	}
-
 	for path, allowed := range c.robotsRules {
 		if path == "*" {
 			continue
 		}
-
 		if strings.HasPrefix(urlPath, path) {
 			return allowed
 		}
@@ -279,22 +288,16 @@ func (c *Crawler) fetchSitemap() {
 		return
 	}
 
-	urlRegex := regexp.MustCompile(`<loc>(.*?)</loc>`)
-	matches := urlRegex.FindAllStringSubmatch(string(body), -1)
-
-	c.sitemapMutex.Lock()
-	for _, match := range matches {
-		if len(match) > 1 {
-			c.sitemapURLs = append(c.sitemapURLs, match[1])
+	var sm sitemap
+	if err := xml.Unmarshal(body, &sm); err == nil {
+		c.sitemapMutex.Lock()
+		for _, u := range sm.URLs {
+			if u.Loc != "" {
+				c.sitemapURLs = append(c.sitemapURLs, u.Loc)
+			}
 		}
+		c.sitemapMutex.Unlock()
 	}
-	c.sitemapMutex.Unlock()
-}
-
-func (c *Crawler) isVisited(urlStr string) bool {
-	c.visitedMutex.RLock()
-	defer c.visitedMutex.RUnlock()
-	return c.visited[urlStr]
 }
 
 func (c *Crawler) markVisited(urlStr string) bool {
@@ -313,8 +316,39 @@ func (c *Crawler) addResult(status PageStatus) {
 	c.results = append(c.results, status)
 }
 
+func extractMainContent(body string) string {
+	doc, err := htmlparser.Parse(strings.NewReader(body))
+	if err != nil {
+		return body
+	}
+	var content strings.Builder
+	var traverse func(*htmlparser.Node)
+	traverse = func(n *htmlparser.Node) {
+		if n.Type == htmlparser.ElementNode {
+			skip := []string{"nav", "header", "footer", "script", "style"}
+			for _, tag := range skip {
+				if n.Data == tag {
+					return
+				}
+			}
+		}
+		if n.Type == htmlparser.TextNode {
+			text := strings.TrimSpace(n.Data)
+			if text != "" {
+				content.WriteString(text)
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			traverse(c)
+		}
+	}
+	traverse(doc)
+	return content.String()
+}
+
 func (c *Crawler) checkDuplicateContent(content string, currentURL string) (bool, string) {
-	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
+	mainContent := extractMainContent(content)
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(mainContent)))
 
 	c.contentHashMutex.Lock()
 	defer c.contentHashMutex.Unlock()
@@ -367,13 +401,23 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.Header.Set("Connection", "keep-alive")
 
 	redirectCount := 0
-	originalURL := urlStr
 
-	resp, err := c.client.Do(req)
+	client := &http.Client{
+		Timeout:   requestTimeout,
+		Transport: c.client.Transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			redirectCount = len(via)
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return &PageStatus{
 			URL:          urlStr,
@@ -385,11 +429,16 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.Request.URL.String() != originalURL {
-		redirectCount = 1
+	var bodyReader io.Reader = resp.Body
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		gzReader, err := gzip.NewReader(resp.Body)
+		if err == nil {
+			defer gzReader.Close()
+			bodyReader = gzReader
+		}
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(bodyReader)
 	if err != nil {
 		return &PageStatus{
 			URL:          urlStr,
@@ -397,6 +446,7 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 			ErrorMessage: err.Error(),
 			ResourceType: "page",
 			LoadTime:     time.Since(startTime),
+			Redirects:    redirectCount,
 		}, "", err
 	}
 
@@ -428,12 +478,12 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 func (c *Crawler) checkResource(urlStr string, resourceType string) {
 	defer c.wg.Done()
 
-	c.semaphore <- struct{}{}
-	defer func() { <-c.semaphore }()
-
 	if !c.markVisited(urlStr) {
 		return
 	}
+
+	c.semaphore <- struct{}{}
+	defer func() { <-c.semaphore }()
 
 	<-c.rateLimiter.C
 
@@ -444,7 +494,52 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 
 	req, err := http.NewRequestWithContext(ctx, "HEAD", urlStr, nil)
 	if err != nil {
-		req, err = http.NewRequestWithContext(ctx, "GET", urlStr, nil)
+		c.addResult(PageStatus{
+			URL:          urlStr,
+			StatusCode:   0,
+			ErrorMessage: err.Error(),
+			ResourceType: resourceType,
+			LoadTime:     time.Since(startTime),
+		})
+		return
+	}
+
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+
+	redirectCount := 0
+
+	client := &http.Client{
+		Timeout:   requestTimeout,
+		Transport: c.client.Transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			redirectCount = len(via)
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("too many redirects")
+			}
+			return nil
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		ctx2, cancel2 := context.WithTimeout(context.Background(), requestTimeout)
+		defer cancel2()
+		req2, err2 := http.NewRequestWithContext(ctx2, "GET", urlStr, nil)
+		if err2 != nil {
+			c.addResult(PageStatus{
+				URL:          urlStr,
+				StatusCode:   0,
+				ErrorMessage: err.Error(),
+				ResourceType: resourceType,
+				LoadTime:     time.Since(startTime),
+			})
+			logStatus(urlStr, 0, resourceType, err.Error())
+			return
+		}
+		req2.Header.Set("User-Agent", userAgent)
+		req2.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		resp, err = client.Do(req2)
 		if err != nil {
 			c.addResult(PageStatus{
 				URL:          urlStr,
@@ -453,32 +548,11 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 				ResourceType: resourceType,
 				LoadTime:     time.Since(startTime),
 			})
+			logStatus(urlStr, 0, resourceType, err.Error())
 			return
 		}
 	}
-
-	req.Header.Set("User-Agent", userAgent)
-
-	originalURL := urlStr
-	redirectCount := 0
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		c.addResult(PageStatus{
-			URL:          urlStr,
-			StatusCode:   0,
-			ErrorMessage: err.Error(),
-			ResourceType: resourceType,
-			LoadTime:     time.Since(startTime),
-		})
-		logStatus(urlStr, 0, resourceType, err.Error())
-		return
-	}
 	defer resp.Body.Close()
-
-	if resp.Request.URL.String() != originalURL {
-		redirectCount = 1
-	}
 
 	contentLength := resp.ContentLength
 	if contentLength < 0 {
@@ -512,16 +586,16 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 func (c *Crawler) crawlPage(urlStr string) {
 	defer c.wg.Done()
 
-	c.semaphore <- struct{}{}
-	defer func() { <-c.semaphore }()
-
 	if !c.markVisited(urlStr) {
 		return
 	}
 
+	c.semaphore <- struct{}{}
+	defer func() { <-c.semaphore }()
+
 	status, body, err := c.fetchPage(urlStr)
 
-	if err == nil && status.StatusCode == 200 && strings.Contains(status.ContentType, "text/html") {
+	if err == nil && status.StatusCode == 200 && strings.Contains(strings.ToLower(status.ContentType), "text/html") {
 		c.analyzeSEO(status, body)
 
 		isDuplicate, originalURL := c.checkDuplicateContent(body, urlStr)
@@ -539,7 +613,7 @@ func (c *Crawler) crawlPage(urlStr string) {
 
 	logStatus(urlStr, status.StatusCode, "page", "")
 
-	if status.StatusCode != 200 || !strings.Contains(status.ContentType, "text/html") {
+	if status.StatusCode != 200 || !strings.Contains(strings.ToLower(status.ContentType), "text/html") {
 		return
 	}
 
@@ -559,15 +633,19 @@ func (c *Crawler) crawlPage(urlStr string) {
 
 		fullURL := parsedLink.String()
 
-		if c.isVisited(fullURL) {
-			continue
-		}
-
 		if c.shouldCrawl(parsedLink) {
-			c.wg.Add(1)
-			go c.crawlPage(fullURL)
+			c.visitedMutex.RLock()
+			alreadyVisited := c.visited[fullURL]
+			c.visitedMutex.RUnlock()
+			if !alreadyVisited {
+				c.wg.Add(1)
+				go c.crawlPage(fullURL)
+			}
 		} else if parsedLink.Host != c.domain {
-			if !c.isVisited(fullURL) {
+			c.visitedMutex.RLock()
+			alreadyVisited := c.visited[fullURL]
+			c.visitedMutex.RUnlock()
+			if !alreadyVisited {
 				c.wg.Add(1)
 				go c.checkResource(fullURL, "external")
 			}
@@ -587,7 +665,10 @@ func (c *Crawler) crawlPage(urlStr string) {
 
 		fullURL := parsedImg.String()
 
-		if !c.isVisited(fullURL) {
+		c.visitedMutex.RLock()
+		alreadyVisited := c.visited[fullURL]
+		c.visitedMutex.RUnlock()
+		if !alreadyVisited {
 			c.wg.Add(1)
 			go c.checkResource(fullURL, "image")
 		}
@@ -595,23 +676,35 @@ func (c *Crawler) crawlPage(urlStr string) {
 }
 
 func (c *Crawler) analyzeSEO(status *PageStatus, body string) {
-	doc, err := html.Parse(strings.NewReader(body))
+	doc, err := htmlparser.Parse(strings.NewReader(body))
 	if err != nil {
 		return
 	}
 
-	var traverse func(*html.Node)
+	var traverse func(*htmlparser.Node)
 	h1Count := 0
 
-	traverse = func(n *html.Node) {
-		if n.Type == html.ElementNode {
+	traverse = func(n *htmlparser.Node) {
+		if n.Type == htmlparser.ElementNode {
 			switch n.Data {
 			case "title":
-				if n.FirstChild != nil {
-					status.Title = n.FirstChild.Data
+				var titleText strings.Builder
+				for child := n.FirstChild; child != nil; child = child.NextSibling {
+					if child.Type == htmlparser.TextNode {
+						titleText.WriteString(child.Data)
+					}
 				}
+				status.Title = strings.TrimSpace(titleText.String())
 			case "h1":
-				h1Count++
+				var h1Text strings.Builder
+				for child := n.FirstChild; child != nil; child = child.NextSibling {
+					if child.Type == htmlparser.TextNode {
+						h1Text.WriteString(child.Data)
+					}
+				}
+				if strings.TrimSpace(h1Text.String()) != "" {
+					h1Count++
+				}
 			case "link":
 				for _, attr := range n.Attr {
 					if attr.Key == "rel" && attr.Val == "canonical" {
@@ -668,7 +761,11 @@ func (c *Crawler) Start() *AuditResult {
 
 	c.wg.Wait()
 
-	return c.analyzeResults()
+	result := c.analyzeResults()
+
+	c.rateLimiter.Stop()
+
+	return result
 }
 
 func (c *Crawler) analyzeResults() *AuditResult {
@@ -686,6 +783,7 @@ func (c *Crawler) analyzeResults() *AuditResult {
 		MissingMetaTags:  make([]PageStatus, 0),
 		SitemapURLs:      c.sitemapURLs,
 		RobotsAllowed:    len(c.robotsRules) > 0,
+		RobotsTxtContent: c.robotsTxtRaw,
 	}
 
 	c.resultsMutex.Lock()
@@ -799,14 +897,14 @@ func (c *Crawler) analyzeResults() *AuditResult {
 
 func extractLinksHTML(body, baseURL string) []string {
 	links := make([]string, 0)
-	doc, err := html.Parse(strings.NewReader(body))
+	doc, err := htmlparser.Parse(strings.NewReader(body))
 	if err != nil {
-		return extractLinks(body, baseURL)
+		return links
 	}
 
-	var traverse func(*html.Node)
-	traverse = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "a" {
+	var traverse func(*htmlparser.Node)
+	traverse = func(n *htmlparser.Node) {
+		if n.Type == htmlparser.ElementNode && n.Data == "a" {
 			for _, attr := range n.Attr {
 				if attr.Key == "href" {
 					link := attr.Val
@@ -833,14 +931,14 @@ func extractLinksHTML(body, baseURL string) []string {
 
 func extractImagesHTML(body, baseURL string) []string {
 	images := make([]string, 0)
-	doc, err := html.Parse(strings.NewReader(body))
+	doc, err := htmlparser.Parse(strings.NewReader(body))
 	if err != nil {
-		return extractImages(body, baseURL)
+		return images
 	}
 
-	var traverse func(*html.Node)
-	traverse = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "img" {
+	var traverse func(*htmlparser.Node)
+	traverse = func(n *htmlparser.Node) {
+		if n.Type == htmlparser.ElementNode && n.Data == "img" {
 			for _, attr := range n.Attr {
 				if attr.Key == "src" {
 					img := attr.Val
@@ -862,48 +960,6 @@ func extractImagesHTML(body, baseURL string) []string {
 	return images
 }
 
-func extractLinks(body, baseURL string) []string {
-	links := make([]string, 0)
-
-	hrefRegex := regexp.MustCompile(`href=["']([^"']+)["']`)
-	matches := hrefRegex.FindAllStringSubmatch(body, -1)
-
-	for _, match := range matches {
-		if len(match) > 1 {
-			link := match[1]
-			if link != "" && !strings.HasPrefix(link, "#") && !strings.HasPrefix(link, "javascript:") && !strings.HasPrefix(link, "mailto:") && !strings.HasPrefix(link, "tel:") {
-				absURL := resolveURL(baseURL, link)
-				if absURL != "" {
-					links = append(links, absURL)
-				}
-			}
-		}
-	}
-
-	return links
-}
-
-func extractImages(body, baseURL string) []string {
-	images := make([]string, 0)
-
-	srcRegex := regexp.MustCompile(`<img[^>]+src=["']([^"']+)["']`)
-	matches := srcRegex.FindAllStringSubmatch(body, -1)
-
-	for _, match := range matches {
-		if len(match) > 1 {
-			img := match[1]
-			if img != "" && !strings.HasPrefix(img, "data:") {
-				absURL := resolveURL(baseURL, img)
-				if absURL != "" {
-					images = append(images, absURL)
-				}
-			}
-		}
-	}
-
-	return images
-}
-
 func resolveURL(baseURL, targetURL string) string {
 	base, err := url.Parse(baseURL)
 	if err != nil {
@@ -916,6 +972,10 @@ func resolveURL(baseURL, targetURL string) string {
 	}
 
 	resolved := base.ResolveReference(target)
+	scheme := strings.ToLower(resolved.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return ""
+	}
 	return resolved.String()
 }
 
@@ -990,6 +1050,19 @@ func logImageStatus(urlStr string, statusCode int, size int64) {
 	fmt.Printf("%s[%s IMG] %s - %s%s\n", color, symbol, displayURL, message, colorReset)
 }
 
+func clearScreen() {
+	switch runtime.GOOS {
+	case "windows":
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	default:
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
+}
+
 func displayASCIIBanner() {
 	banner := `
   ██╗  ██╗██╗   ██╗███╗   ██╗████████╗ ██████╗ █████╗ ████████╗
@@ -1014,7 +1087,7 @@ func displayASCIIBanner() {
 	fmt.Println("                           Enterprise Web Audit & SEO Crawler")
 	fmt.Println("                                    Dev: @tc4dy")
 	fmt.Print(colorYellow)
-	fmt.Println("                         \"Leave your cats in the area and enjoy!\"")
+	fmt.Println("                      \"Sniffing every corner of the web, one paw at a time.\"")
 	fmt.Print(colorReset)
 	fmt.Println()
 	fmt.Println(colorCyan + "═══════════════════════════════════════════════════════════════════════════════" + colorReset)
@@ -1372,23 +1445,23 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
                 <h3>Total Scanned</h3>
                 <div class="value">` + fmt.Sprintf("%d", audit.TotalScanned) + `</div>
             </div>
-            <div class="stat-card ` + getStatClass(len(audit.BrokenLinks)) + `">
+            <div class="stat-card ` + getStatClass(len(audit.BrokenLinks), audit.TotalScanned) + `">
                 <h3>Broken Links</h3>
                 <div class="value">` + fmt.Sprintf("%d", len(audit.BrokenLinks)) + `</div>
             </div>
-            <div class="stat-card ` + getStatClass(len(audit.ServerErrors)) + `">
+            <div class="stat-card ` + getStatClass(len(audit.ServerErrors), audit.TotalScanned) + `">
                 <h3>Server Errors</h3>
                 <div class="value">` + fmt.Sprintf("%d", len(audit.ServerErrors)) + `</div>
             </div>
-            <div class="stat-card ` + getStatClass(len(audit.CriticalAssets)) + `">
+            <div class="stat-card ` + getStatClass(len(audit.CriticalAssets), audit.TotalScanned) + `">
                 <h3>Critical Images</h3>
                 <div class="value">` + fmt.Sprintf("%d", len(audit.CriticalAssets)) + `</div>
             </div>
-            <div class="stat-card ` + getStatClass(len(audit.DuplicateContent)) + `">
+            <div class="stat-card ` + getStatClass(len(audit.DuplicateContent), audit.TotalScanned) + `">
                 <h3>Duplicate Content</h3>
                 <div class="value">` + fmt.Sprintf("%d", len(audit.DuplicateContent)) + `</div>
             </div>
-            <div class="stat-card ` + getStatClass(len(audit.NonHTTPS)) + `">
+            <div class="stat-card ` + getStatClass(len(audit.NonHTTPS), audit.TotalScanned) + `">
                 <h3>Non-HTTPS Pages</h3>
                 <div class="value">` + fmt.Sprintf("%d", len(audit.NonHTTPS)) + `</div>
             </div>
@@ -1434,13 +1507,17 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
 			priority = "Critical"
 		} else if issue.ContentHash != "" {
 			statusClass = "status-warning"
-			message = "Duplicate of: " + issue.ContentHash
+			message = "Duplicate of: " + html.EscapeString(issue.ContentHash)
 			priority = "Medium"
 		} else if !issue.IsHTTPS {
 			statusClass = "status-warning"
 			message = "Not using HTTPS"
 			priority = "High"
 		}
+
+		escapedURL := html.EscapeString(issue.URL)
+		escapedMessage := html.EscapeString(message)
+		escapedPriority := html.EscapeString(priority)
 
 		htmlContent += fmt.Sprintf(`
                     <tr>
@@ -1450,7 +1527,7 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
                         <td>%s</td>
                         <td><span class="status-badge %s">%s</span></td>
                     </tr>`,
-			issue.URL, issue.URL, issue.ResourceType, statusClass, statusText, message, statusClass, priority)
+			escapedURL, escapedURL, html.EscapeString(issue.ResourceType), statusClass, statusText, escapedMessage, statusClass, escapedPriority)
 	}
 
 	htmlContent += `
@@ -1458,8 +1535,8 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
             </table>
         </div>
         <div class="footer">
-            Generated by HuntCat on ` + time.Now().Format("January 2, 2006 at 15:04:05") + `<br>
-            Target: ` + targetURL + `<br>
+            Generated by HuntCat on ` + html.EscapeString(time.Now().Format("January 2, 2006 at 15:04:05")) + `<br>
+            Target: ` + html.EscapeString(targetURL) + `<br>
             Sitemap URLs Found: ` + fmt.Sprintf("%d", len(audit.SitemapURLs)) + `<br>
             Robots.txt: ` + func() string {
 		if audit.RobotsAllowed {
@@ -1467,7 +1544,7 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
 		}
 		return "Issues Detected"
 	}() + `<br>
-            "Leave your cats in the area and enjoy!"
+            "Sniffing every corner of the web, one paw at a time."
         </div>
     </div>
 </body>
@@ -1487,10 +1564,15 @@ func getScoreClass(score float64) string {
 	return "score-poor"
 }
 
-func getStatClass(count int) string {
+func getStatClass(count int, total int) string {
 	if count == 0 {
 		return "success"
-	} else if count < 5 {
+	}
+	if total == 0 {
+		return "critical"
+	}
+	ratio := float64(count) / float64(total) * 100
+	if ratio < 2.0 {
 		return "warning"
 	}
 	return "critical"
@@ -1546,6 +1628,7 @@ func exportCSVReport(audit *AuditResult) error {
 }
 
 func main() {
+	clearScreen()
 	displayASCIIBanner()
 
 	if len(os.Args) < 2 {
