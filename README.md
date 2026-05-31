@@ -1,3 +1,5 @@
+![HuntCat Banner](huntcat-banner.svg)
+
 # 🐱 HuntCat
 **Enterprise-Grade Web Audit & SEO Crawler**
 
