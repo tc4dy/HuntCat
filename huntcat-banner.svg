@@ -1,0 +1,374 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 280" width="900" height="280">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a14"/>
+      <stop offset="50%" style="stop-color:#0d0d1a"/>
+      <stop offset="100%" style="stop-color:#060610"/>
+    </linearGradient>
+
+    <!-- Neon cyan glow -->
+    <filter id="neonCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur1"/>
+      <feGaussianBlur stdDeviation="8" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Neon magenta glow -->
+    <filter id="neonMagenta" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur1"/>
+      <feGaussianBlur stdDeviation="10" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Soft glow for cat -->
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Scanline pattern -->
+    <pattern id="scanlines" x="0" y="0" width="2" height="4" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="2" height="1" fill="rgba(0,255,255,0.015)"/>
+      <rect x="0" y="2" width="2" height="1" fill="rgba(0,0,0,0.1)"/>
+    </pattern>
+
+    <!-- Grid pattern -->
+    <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,255,255,0.05)" stroke-width="0.5"/>
+    </pattern>
+
+    <!-- Title text gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00ffff"/>
+      <stop offset="40%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#ff00ff"/>
+    </linearGradient>
+
+    <!-- Corner accent gradient -->
+    <linearGradient id="cornerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ffff;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#00ffff;stop-opacity:0"/>
+    </linearGradient>
+
+    <!-- Eye glow -->
+    <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#00ffff;stop-opacity:1"/>
+      <stop offset="60%" style="stop-color:#00ccff;stop-opacity:0.8"/>
+      <stop offset="100%" style="stop-color:#0066ff;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Cat body gradient -->
+    <linearGradient id="catBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#0f0f1a"/>
+    </linearGradient>
+
+    <!-- Circuit line -->
+    <filter id="circuitGlow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Text shadow -->
+    <filter id="textShadow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <clipPath id="mainClip">
+      <rect width="900" height="280" rx="12"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="280" rx="12" fill="url(#bgGrad)"/>
+  <rect width="900" height="280" rx="12" fill="url(#grid)" clip-path="url(#mainClip)"/>
+  <rect width="900" height="280" rx="12" fill="url(#scanlines)" clip-path="url(#mainClip)"/>
+
+  <!-- Subtle noise / grain overlay -->
+  <rect width="900" height="280" rx="12" fill="rgba(0,0,20,0.3)" clip-path="url(#mainClip)"/>
+
+  <!-- Corner decorations - top left -->
+  <g filter="url(#circuitGlow)" opacity="0.9">
+    <line x1="0" y1="30" x2="60" y2="30" stroke="#00ffff" stroke-width="1.5" opacity="0.7"/>
+    <line x1="30" y1="0" x2="30" y2="60" stroke="#00ffff" stroke-width="1.5" opacity="0.7"/>
+    <rect x="20" y="20" width="20" height="20" fill="none" stroke="#00ffff" stroke-width="1" opacity="0.5"/>
+    <circle cx="30" cy="30" r="3" fill="#00ffff" opacity="0.9"/>
+
+    <!-- Circuit traces top left -->
+    <path d="M 0 50 H 15 V 65 H 45" fill="none" stroke="#00ffff" stroke-width="0.8" opacity="0.4"/>
+    <path d="M 50 0 V 15 H 70" fill="none" stroke="#00ffff" stroke-width="0.8" opacity="0.4"/>
+    <circle cx="15" cy="65" r="2" fill="none" stroke="#00ffff" opacity="0.5"/>
+    <circle cx="70" cy="15" r="2" fill="none" stroke="#00ffff" opacity="0.5"/>
+  </g>
+
+  <!-- Corner decorations - top right -->
+  <g filter="url(#circuitGlow)" opacity="0.9">
+    <line x1="900" y1="30" x2="840" y2="30" stroke="#ff00ff" stroke-width="1.5" opacity="0.7"/>
+    <line x1="870" y1="0" x2="870" y2="60" stroke="#ff00ff" stroke-width="1.5" opacity="0.7"/>
+    <rect x="860" y="20" width="20" height="20" fill="none" stroke="#ff00ff" stroke-width="1" opacity="0.5"/>
+    <circle cx="870" cy="30" r="3" fill="#ff00ff" opacity="0.9"/>
+
+    <path d="M 900 50 H 885 V 65 H 855" fill="none" stroke="#ff00ff" stroke-width="0.8" opacity="0.4"/>
+    <path d="M 850 0 V 15 H 830" fill="none" stroke="#ff00ff" stroke-width="0.8" opacity="0.4"/>
+    <circle cx="885" cy="65" r="2" fill="none" stroke="#ff00ff" opacity="0.5"/>
+    <circle cx="830" cy="15" r="2" fill="none" stroke="#ff00ff" opacity="0.5"/>
+  </g>
+
+  <!-- Corner decorations - bottom left -->
+  <g filter="url(#circuitGlow)" opacity="0.9">
+    <line x1="0" y1="250" x2="60" y2="250" stroke="#ff00ff" stroke-width="1.5" opacity="0.7"/>
+    <line x1="30" y1="280" x2="30" y2="220" stroke="#ff00ff" stroke-width="1.5" opacity="0.7"/>
+    <rect x="20" y="240" width="20" height="20" fill="none" stroke="#ff00ff" stroke-width="1" opacity="0.5"/>
+    <circle cx="30" cy="250" r="3" fill="#ff00ff" opacity="0.9"/>
+  </g>
+
+  <!-- Corner decorations - bottom right -->
+  <g filter="url(#circuitGlow)" opacity="0.9">
+    <line x1="900" y1="250" x2="840" y2="250" stroke="#00ffff" stroke-width="1.5" opacity="0.7"/>
+    <line x1="870" y1="280" x2="870" y2="220" stroke="#00ffff" stroke-width="1.5" opacity="0.7"/>
+    <rect x="860" y="240" width="20" height="20" fill="none" stroke="#00ffff" stroke-width="1" opacity="0.5"/>
+    <circle cx="870" cy="250" r="3" fill="#00ffff" opacity="0.9"/>
+  </g>
+
+  <!-- Horizontal accent lines -->
+  <line x1="80" y1="18" x2="400" y2="18" stroke="#00ffff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="500" y1="18" x2="820" y2="18" stroke="#ff00ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="80" y1="262" x2="400" y2="262" stroke="#ff00ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="500" y1="262" x2="820" y2="262" stroke="#00ffff" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- Glowing horizontal divider -->
+  <line x1="100" y1="200" x2="800" y2="200" stroke="#00ffff" stroke-width="0.5" opacity="0.25"/>
+
+  <!-- === CYBERPUNK CAT === -->
+  <g transform="translate(60, 30)" filter="url(#softGlow)">
+    <!-- Cat body - sleek geometric -->
+    <ellipse cx="100" cy="145" rx="55" ry="50" fill="url(#catBodyGrad)" stroke="#00ffff" stroke-width="0.8" opacity="0.9"/>
+
+    <!-- Chest highlight -->
+    <ellipse cx="100" cy="155" rx="28" ry="25" fill="rgba(0,255,255,0.06)"/>
+
+    <!-- Left ear -->
+    <polygon points="60,100 48,62 82,88" fill="#0d0d1a" stroke="#00ffff" stroke-width="1.2"/>
+    <!-- Left ear inner -->
+    <polygon points="63,97 54,72 78,91" fill="rgba(255,0,255,0.25)"/>
+    <!-- Left ear neon edge -->
+    <line x1="48" y1="62" x2="82" y2="88" stroke="#ff00ff" stroke-width="0.8" opacity="0.8"/>
+
+    <!-- Right ear -->
+    <polygon points="140,100 152,62 118,88" fill="#0d0d1a" stroke="#00ffff" stroke-width="1.2"/>
+    <!-- Right ear inner -->
+    <polygon points="137,97 146,72 122,91" fill="rgba(255,0,255,0.25)"/>
+    <!-- Right ear neon edge -->
+    <line x1="152" y1="62" x2="118" y2="88" stroke="#ff00ff" stroke-width="0.8" opacity="0.8"/>
+
+    <!-- Head -->
+    <ellipse cx="100" cy="108" rx="44" ry="40" fill="url(#catBodyGrad)" stroke="#00ffff" stroke-width="1"/>
+
+    <!-- Cyber circuit lines on head -->
+    <path d="M 80 95 H 68 V 105" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.5"/>
+    <path d="M 120 95 H 132 V 105" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.5"/>
+    <circle cx="68" cy="105" r="1.5" fill="#00ffff" opacity="0.7"/>
+    <circle cx="132" cy="105" r="1.5" fill="#00ffff" opacity="0.7"/>
+
+    <!-- Left eye glow halo -->
+    <ellipse cx="84" cy="105" rx="12" ry="10" fill="rgba(0,255,255,0.12)"/>
+    <!-- Right eye glow halo -->
+    <ellipse cx="116" cy="105" rx="12" ry="10" fill="rgba(0,255,255,0.12)"/>
+
+    <!-- Left eye -->
+    <ellipse cx="84" cy="105" rx="9" ry="8" fill="#001a1a"/>
+    <ellipse cx="84" cy="105" rx="9" ry="8" fill="none" stroke="#00ffff" stroke-width="1.2"/>
+    <!-- Left eye pupil - vertical slit -->
+    <ellipse cx="84" cy="105" rx="3" ry="7" fill="#00ffff" opacity="0.9"/>
+    <ellipse cx="84" cy="105" rx="1.2" ry="6" fill="#001a33"/>
+    <!-- Left eye glow -->
+    <ellipse cx="84" cy="105" rx="9" ry="8" fill="none" stroke="#00ffff" stroke-width="3" opacity="0.3"/>
+    <!-- Left eye scan line -->
+    <line x1="75" y1="105" x2="93" y2="105" stroke="#00ffff" stroke-width="0.4" opacity="0.6"/>
+
+    <!-- Right eye -->
+    <ellipse cx="116" cy="105" rx="9" ry="8" fill="#001a1a"/>
+    <ellipse cx="116" cy="105" rx="9" ry="8" fill="none" stroke="#00ffff" stroke-width="1.2"/>
+    <!-- Right eye pupil -->
+    <ellipse cx="116" cy="105" rx="3" ry="7" fill="#00ffff" opacity="0.9"/>
+    <ellipse cx="116" cy="105" rx="1.2" ry="6" fill="#001a33"/>
+    <!-- Right eye glow -->
+    <ellipse cx="116" cy="105" rx="9" ry="8" fill="none" stroke="#00ffff" stroke-width="3" opacity="0.3"/>
+    <!-- Right eye scan line -->
+    <line x1="107" y1="105" x2="125" y2="105" stroke="#00ffff" stroke-width="0.4" opacity="0.6"/>
+
+    <!-- Nose -->
+    <polygon points="100,116 96,121 104,121" fill="#ff00ff" opacity="0.9"/>
+
+    <!-- Whiskers left -->
+    <line x1="56" y1="120" x2="88" y2="122" stroke="#00ffff" stroke-width="0.8" opacity="0.8"/>
+    <line x1="54" y1="126" x2="87" y2="125" stroke="#00ffff" stroke-width="0.8" opacity="0.6"/>
+    <line x1="58" y1="132" x2="88" y2="128" stroke="#00ffff" stroke-width="0.8" opacity="0.4"/>
+    <!-- Whisker dots left -->
+    <circle cx="56" cy="120" r="1.2" fill="#00ffff" opacity="0.8"/>
+    <circle cx="54" cy="126" r="1.2" fill="#00ffff" opacity="0.6"/>
+
+    <!-- Whiskers right -->
+    <line x1="144" y1="120" x2="112" y2="122" stroke="#00ffff" stroke-width="0.8" opacity="0.8"/>
+    <line x1="146" y1="126" x2="113" y2="125" stroke="#00ffff" stroke-width="0.8" opacity="0.6"/>
+    <line x1="142" y1="132" x2="112" y2="128" stroke="#00ffff" stroke-width="0.8" opacity="0.4"/>
+    <circle cx="144" cy="120" r="1.2" fill="#00ffff" opacity="0.8"/>
+    <circle cx="146" cy="126" r="1.2" fill="#00ffff" opacity="0.6"/>
+
+    <!-- Mouth -->
+    <path d="M 100 121 Q 96 127 93 125" fill="none" stroke="#ff00ff" stroke-width="1" opacity="0.8"/>
+    <path d="M 100 121 Q 104 127 107 125" fill="none" stroke="#ff00ff" stroke-width="1" opacity="0.8"/>
+
+    <!-- Tail - curvy and glowing -->
+    <path d="M 145 160 Q 175 140 180 160 Q 185 180 165 175 Q 155 172 158 162" fill="none" stroke="#00ffff" stroke-width="2" opacity="0.8"/>
+    <path d="M 145 160 Q 175 140 180 160 Q 185 180 165 175 Q 155 172 158 162" fill="none" stroke="#00ffff" stroke-width="5" opacity="0.15"/>
+
+    <!-- Cyber collar -->
+    <rect x="72" y="135" width="56" height="10" rx="5" fill="#0a0a1a" stroke="#ff00ff" stroke-width="1.2"/>
+    <!-- Collar dots -->
+    <circle cx="85" cy="140" r="2" fill="#ff00ff" opacity="0.9"/>
+    <circle cx="100" cy="140" r="2.5" fill="#00ffff" opacity="0.9"/>
+    <circle cx="115" cy="140" r="2" fill="#ff00ff" opacity="0.9"/>
+    <!-- Collar tag -->
+    <rect x="96" y="143" width="8" height="6" rx="1" fill="#ff00ff" opacity="0.7"/>
+
+    <!-- Body cyber lines -->
+    <path d="M 70 160 H 85 V 170 H 95" fill="none" stroke="#ff00ff" stroke-width="0.6" opacity="0.4"/>
+    <path d="M 130 160 H 115 V 170 H 105" fill="none" stroke="#ff00ff" stroke-width="0.6" opacity="0.4"/>
+
+    <!-- Paws -->
+    <ellipse cx="80" cy="188" rx="16" ry="9" fill="#0d0d1a" stroke="#00ffff" stroke-width="0.8"/>
+    <ellipse cx="120" cy="188" rx="16" ry="9" fill="#0d0d1a" stroke="#00ffff" stroke-width="0.8"/>
+    <!-- Paw toes left -->
+    <ellipse cx="72" cy="185" rx="4" ry="3" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.7"/>
+    <ellipse cx="80" cy="183" rx="4" ry="3" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.7"/>
+    <ellipse cx="88" cy="185" rx="4" ry="3" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.7"/>
+    <!-- Paw toes right -->
+    <ellipse cx="112" cy="185" rx="4" ry="3" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.7"/>
+    <ellipse cx="120" cy="183" rx="4" ry="3" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.7"/>
+    <ellipse cx="128" cy="185" rx="4" ry="3" fill="none" stroke="#00ffff" stroke-width="0.6" opacity="0.7"/>
+
+    <!-- HUD element - targeting reticle above right eye -->
+    <circle cx="116" cy="80" r="12" fill="none" stroke="#ff00ff" stroke-width="0.8" opacity="0.5"/>
+    <line x1="116" y1="65" x2="116" y2="70" stroke="#ff00ff" stroke-width="0.8" opacity="0.5"/>
+    <line x1="116" y1="90" x2="116" y2="95" stroke="#ff00ff" stroke-width="0.8" opacity="0.5"/>
+    <line x1="101" y1="80" x2="106" y2="80" stroke="#ff00ff" stroke-width="0.8" opacity="0.5"/>
+    <line x1="126" y1="80" x2="131" y2="80" stroke="#ff00ff" stroke-width="0.8" opacity="0.5"/>
+    <circle cx="116" cy="80" r="3" fill="none" stroke="#ff00ff" stroke-width="0.8" opacity="0.7"/>
+
+    <!-- Scanline overlay on body -->
+    <ellipse cx="100" cy="150" rx="55" ry="50" fill="url(#scanlines)" opacity="0.3"/>
+  </g>
+
+  <!-- === TEXT SECTION === -->
+  <!-- Main title HUNTCAT -->
+  <text x="265" y="130"
+    font-family="'Courier New', 'Lucida Console', monospace"
+    font-size="86"
+    font-weight="900"
+    letter-spacing="8"
+    fill="url(#titleGrad)"
+    filter="url(#neonCyan)"
+    opacity="0.97">HUNTCAT</text>
+
+  <!-- Title border/underline effect -->
+  <line x1="263" y1="140" x2="740" y2="140" stroke="url(#titleGrad)" stroke-width="1.5" opacity="0.5"/>
+  <line x1="263" y1="143" x2="740" y2="143" stroke="url(#titleGrad)" stroke-width="0.5" opacity="0.25"/>
+
+  <!-- Subtitle row -->
+  <g filter="url(#circuitGlow)">
+    <text x="263" y="172"
+      font-family="'Courier New', monospace"
+      font-size="14"
+      font-weight="400"
+      letter-spacing="6"
+      fill="#00ffff"
+      opacity="0.85">SEO CRAWLER &amp; WEB AUDITOR</text>
+  </g>
+
+  <!-- Small decorative dash before/after subtitle -->
+  <line x1="245" y1="165" x2="258" y2="165" stroke="#ff00ff" stroke-width="1.5" opacity="0.8"/>
+  <line x1="245" y1="168" x2="258" y2="168" stroke="#ff00ff" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- Stats / tags row -->
+  <g opacity="0.75" filter="url(#circuitGlow)">
+    <!-- Tag 1 -->
+    <rect x="263" y="185" width="88" height="20" rx="3" fill="rgba(0,255,255,0.08)" stroke="#00ffff" stroke-width="0.8"/>
+    <text x="278" y="199"
+      font-family="'Courier New', monospace"
+      font-size="10"
+      letter-spacing="2"
+      fill="#00ffff">CRAWL</text>
+
+    <!-- Tag 2 -->
+    <rect x="359" y="185" width="88" height="20" rx="3" fill="rgba(255,0,255,0.08)" stroke="#ff00ff" stroke-width="0.8"/>
+    <text x="372" y="199"
+      font-family="'Courier New', monospace"
+      font-size="10"
+      letter-spacing="2"
+      fill="#ff00ff">ANALYZE</text>
+
+    <!-- Tag 3 -->
+    <rect x="455" y="185" width="88" height="20" rx="3" fill="rgba(0,255,255,0.08)" stroke="#00ffff" stroke-width="0.8"/>
+    <text x="468" y="199"
+      font-family="'Courier New', monospace"
+      font-size="10"
+      letter-spacing="2"
+      fill="#00ffff">REPORT</text>
+
+    <!-- Tag 4 -->
+    <rect x="551" y="185" width="88" height="20" rx="3" fill="rgba(255,0,255,0.08)" stroke="#ff00ff" stroke-width="0.8"/>
+    <text x="566" y="199"
+      font-family="'Courier New', monospace"
+      font-size="10"
+      letter-spacing="2"
+      fill="#ff00ff">AUDIT</text>
+  </g>
+
+  <!-- Dev credit -->
+  <text x="265" y="242"
+    font-family="'Courier New', monospace"
+    font-size="11"
+    letter-spacing="3"
+    fill="#ff00ff"
+    opacity="0.5">// dev: @tc4dy</text>
+
+
+
+  <!-- Animated corner dots -->
+  <circle cx="30" cy="30" r="3" fill="#00ffff">
+    <animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="870" cy="30" r="3" fill="#ff00ff">
+    <animate attributeName="opacity" values="0.2;1;0.2" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="30" cy="250" r="3" fill="#ff00ff">
+    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="870" cy="250" r="3" fill="#00ffff">
+    <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Border frame -->
+  <rect x="1" y="1" width="898" height="278" rx="11" fill="none" stroke="#00ffff" stroke-width="1" opacity="0.3"/>
+  <rect x="3" y="3" width="894" height="274" rx="10" fill="none" stroke="#ff00ff" stroke-width="0.4" opacity="0.15"/>
+</svg>
