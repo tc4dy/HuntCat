@@ -7,7 +7,7 @@
 
 *"Leave your cats in the area and enjoy!"*
 
-[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Reports](#-reports) • [Architecture](#-architecture)
+[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Reports](#-reports) 
 
 </div>
 
