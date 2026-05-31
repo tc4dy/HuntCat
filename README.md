@@ -1,5 +1,4 @@
-i# 🐱 HuntCat
-
+# 🐱 HuntCat
 **Enterprise-Grade Web Audit & SEO Crawler**
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
@@ -252,8 +251,6 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 <div align="center">
 
-**⭐ If you find HuntCat useful, please star this repository! ⭐**
-
-Made with 🐱 and Go
+Made with 🐱 Go Lang
 
 </div>
