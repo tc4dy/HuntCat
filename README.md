@@ -245,14 +245,6 @@ const (
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
----
-
-## 👨‍💻 **Author**
-
-**Developer**: [@tc4dy](https://github.com/tc4dy)
-
-<div align="center">
-
 Made with 🐱 Go Lang
 
 </div>
