@@ -4,7 +4,7 @@
 
 **huntcat.go** is intended for regular users. If you’re a developer and want to explore the code more thoroughly, you can access the main file structure **(main.go, crawler.go, constants.go, colors.go, page_status.go, http_client.go, parsers.go, reports.go, utils.go, go.mod)** in the **“For Developers (Discrete Modular)”** folder. 🎨📊
 
-# 🐱 HuntCat
+# 🐱 HuntCat [![Awesome Go](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/avelino/awesome-go)
 **Enterprise-Grade Web Audit & SEO Crawler**
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
@@ -12,7 +12,10 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](https://github.com)
 [![Made with Go](https://img.shields.io/badge/Made%20with-Go-1E90BE?style=for-the-badge&logo=go)](https://go.dev/)
 [![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
-[![Awesome Go](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/avelino/awesome-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tc4dy/HuntCat)](https://goreportcard.com/report/github.com/tc4dy/HuntCat)
+[![GitHub Stars](https://img.shields.io/github/stars/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/issues)
 
 *"Leave your cats in the area and enjoy!"*
 
