@@ -12,7 +12,6 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](https://github.com)
 [![Made with Go](https://img.shields.io/badge/Made%20with-Go-1E90BE?style=for-the-badge&logo=go)](https://go.dev/)
 [![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
-[![Go Report Card](https://goreportcard.com/badge/github.com/tc4dy/HuntCat)](https://goreportcard.com/report/github.com/tc4dy/HuntCat)
 [![GitHub Stars](https://img.shields.io/github/stars/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/issues)
