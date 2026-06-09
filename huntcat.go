@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"strings"
 	"sync"
@@ -21,7 +23,13 @@ import (
 	"time"
 
 	htmlparser "golang.org/x/net/html"
+
+	"github.com/andybalholm/brotli"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 const (
 	maxConcurrency         = 50
@@ -30,10 +38,18 @@ const (
 	largeImageThreshold    = 700 * 1024
 	hugeImageThreshold     = 1024 * 1024
 	criticalImageThreshold = 2 * 1024 * 1024
-	userAgent              = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	userAgentBase          = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 	rateLimitDelay         = 100 * time.Millisecond
-	optimalTitleLength     = 60
-	optimalDescLength      = 160
+	optimalTitleMin        = 50
+	optimalTitleMax        = 60
+	optimalDescMax         = 160
+	maxCrawlDepth          = 5
+	maxURLLength           = 80
+	truncatedURLLength     = 77
+	shortURLLength         = 60
+	shortTruncatedLength   = 57
+	gcInterval             = 100
+	memoryPruneInterval    = 5 * time.Minute
 )
 
 const (
@@ -51,6 +67,21 @@ const (
 	colorMagenta   = "\033[35m"
 )
 
+var (
+	printMutex sync.Mutex
+	userAgents = []string{
+		userAgentBase,
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+		"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
+		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0",
+	}
+)
+
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type PageStatus struct {
 	URL            string
 	StatusCode     int
@@ -63,6 +94,7 @@ type PageStatus struct {
 	Description    string
 	H1Count        int
 	HasCanonical   bool
+	CanonicalURL   string
 	IsHTTPS        bool
 	HTTPVersion    string
 	HasRobotsMeta  bool
@@ -104,27 +136,45 @@ type Crawler struct {
 	resultsMutex     sync.Mutex
 	wg               sync.WaitGroup
 	semaphore        chan struct{}
-	client           *http.Client
+	client           HTTPClient
 	domain           string
 	rateLimiter      *time.Ticker
 	contentHashes    map[string]string
 	contentHashMutex sync.RWMutex
+	contentCache     map[string]string
+	contentCacheMtx  sync.RWMutex
 	robotsRules      map[string]bool
 	robotsMutex      sync.RWMutex
 	sitemapURLs      []string
 	sitemapMutex     sync.Mutex
 	robotsTxtRaw     string
+	depth            map[string]int
+	depthMutex       sync.Mutex
+	authCookie       string
+	authToken        string
+	customHeaders    map[string]string
+	scannedCount     int
+	lastPruneTime    time.Time
+	pruneMutex       sync.Mutex
 }
 
 type sitemapURL struct {
 	Loc string `xml:"loc"`
 }
 
-type sitemap struct {
+type sitemapIndex struct {
+	Sitemaps []sitemapURL `xml:"sitemap"`
+}
+
+type urlset struct {
 	URLs []sitemapURL `xml:"url"`
 }
 
-func NewCrawler(startURL string) (*Crawler, error) {
+func getRandomUserAgent() string {
+	return userAgents[rand.Intn(len(userAgents))]
+}
+
+func NewCrawler(startURL string, opts ...CrawlerOption) (*Crawler, error) {
 	parsedURL, err := url.Parse(startURL)
 	if err != nil {
 		return nil, err
@@ -138,6 +188,7 @@ func NewCrawler(startURL string) (*Crawler, error) {
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: false,
 			MinVersion:         tls.VersionTLS12,
+			MaxVersion:         tls.VersionTLS13,
 		},
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 100,
@@ -165,14 +216,70 @@ func NewCrawler(startURL string) (*Crawler, error) {
 		domain:        parsedURL.Host,
 		rateLimiter:   time.NewTicker(rateLimitDelay),
 		contentHashes: make(map[string]string),
+		contentCache:  make(map[string]string),
 		robotsRules:   make(map[string]bool),
 		sitemapURLs:   make([]string, 0),
+		depth:         make(map[string]int),
+		customHeaders: make(map[string]string),
+		lastPruneTime: time.Now(),
+	}
+
+	for _, opt := range opts {
+		opt(crawler)
 	}
 
 	crawler.fetchRobotsTxt()
 	crawler.fetchSitemap()
 
 	return crawler, nil
+}
+
+type CrawlerOption func(*Crawler)
+
+func WithAuthCookie(cookie string) CrawlerOption {
+	return func(c *Crawler) {
+		c.authCookie = cookie
+	}
+}
+
+func WithAuthToken(token string) CrawlerOption {
+	return func(c *Crawler) {
+		c.authToken = token
+	}
+}
+
+func WithCustomHeaders(headers map[string]string) CrawlerOption {
+	return func(c *Crawler) {
+		for k, v := range headers {
+			c.customHeaders[k] = v
+		}
+	}
+}
+
+func WithHTTPClient(client HTTPClient) CrawlerOption {
+	return func(c *Crawler) {
+		c.client = client
+	}
+}
+
+func (c *Crawler) setRequestHeaders(req *http.Request) {
+	req.Header.Set("User-Agent", getRandomUserAgent())
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Connection", "keep-alive")
+
+	for k, v := range c.customHeaders {
+		req.Header.Set(k, v)
+	}
+
+	if c.authCookie != "" {
+		req.Header.Set("Cookie", c.authCookie)
+	}
+
+	if c.authToken != "" {
+		req.Header.Set("Authorization", "Bearer "+c.authToken)
+	}
 }
 
 func (c *Crawler) fetchRobotsTxt() {
@@ -183,33 +290,44 @@ func (c *Crawler) fetchRobotsTxt() {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", robotsURL, nil)
 	if err != nil {
+		c.robotsMutex.Lock()
 		c.robotsRules["*"] = true
+		c.robotsMutex.Unlock()
 		return
 	}
 
-	req.Header.Set("User-Agent", userAgent)
+	c.setRequestHeaders(req)
 	resp, err := c.client.Do(req)
 	if err != nil {
+		c.robotsMutex.Lock()
 		c.robotsRules["*"] = true
+		c.robotsMutex.Unlock()
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
+		c.robotsMutex.Lock()
 		c.robotsRules["*"] = true
+		c.robotsMutex.Unlock()
 		return
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		c.robotsMutex.Lock()
 		c.robotsRules["*"] = true
+		c.robotsMutex.Unlock()
 		return
 	}
 
+	c.robotsMutex.Lock()
 	c.robotsTxtRaw = string(body)
+	c.robotsMutex.Unlock()
 
 	lines := strings.Split(string(body), "\n")
 	userAgentMatch := false
+	tempRules := make(map[string]bool)
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -217,48 +335,58 @@ func (c *Crawler) fetchRobotsTxt() {
 		if strings.HasPrefix(strings.ToLower(line), "user-agent:") {
 			agent := strings.TrimSpace(strings.TrimPrefix(strings.ToLower(line), "user-agent:"))
 			userAgentMatch = (agent == "*" || strings.Contains(agent, "mozilla") || agent == "huntcat")
+			continue
 		}
 
-		if userAgentMatch && strings.HasPrefix(strings.ToLower(line), "disallow:") {
-			path := strings.TrimSpace(strings.TrimPrefix(line, "Disallow:"))
-			path = strings.TrimSpace(strings.TrimPrefix(path, "disallow:"))
+		if !userAgentMatch {
+			continue
+		}
+
+		if strings.HasPrefix(strings.ToLower(line), "disallow:") {
+			path := strings.TrimSpace(line[9:])
 			if path != "" {
-				c.robotsMutex.Lock()
-				c.robotsRules[path] = false
-				c.robotsMutex.Unlock()
+				tempRules[path] = false
 			}
-		}
-
-		if userAgentMatch && strings.HasPrefix(strings.ToLower(line), "allow:") {
-			path := strings.TrimSpace(strings.TrimPrefix(line, "Allow:"))
-			path = strings.TrimSpace(strings.TrimPrefix(path, "allow:"))
+		} else if strings.HasPrefix(strings.ToLower(line), "allow:") {
+			path := strings.TrimSpace(line[6:])
 			if path != "" {
-				c.robotsMutex.Lock()
-				c.robotsRules[path] = true
-				c.robotsMutex.Unlock()
+				tempRules[path] = true
 			}
 		}
 	}
 
-	if len(c.robotsRules) == 0 {
+	c.robotsMutex.Lock()
+	if len(tempRules) == 0 {
 		c.robotsRules["*"] = true
+	} else {
+		for k, v := range tempRules {
+			c.robotsRules[k] = v
+		}
 	}
+	c.robotsMutex.Unlock()
 }
 
 func (c *Crawler) isAllowedByRobots(urlPath string) bool {
 	c.robotsMutex.RLock()
 	defer c.robotsMutex.RUnlock()
 
-	for path, allowed := range c.robotsRules {
-		if path == "*" {
+	longestMatch := ""
+	allowed := true
+
+	for pattern, rule := range c.robotsRules {
+		if pattern == "*" {
 			continue
 		}
-		if strings.HasPrefix(urlPath, path) {
-			return allowed
+		matched, _ := path.Match(pattern, urlPath)
+		if matched {
+			if len(pattern) > len(longestMatch) {
+				longestMatch = pattern
+				allowed = rule
+			}
 		}
 	}
 
-	return true
+	return allowed
 }
 
 func (c *Crawler) fetchSitemap() {
@@ -272,7 +400,7 @@ func (c *Crawler) fetchSitemap() {
 		return
 	}
 
-	req.Header.Set("User-Agent", userAgent)
+	c.setRequestHeaders(req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return
@@ -288,10 +416,22 @@ func (c *Crawler) fetchSitemap() {
 		return
 	}
 
-	var sm sitemap
-	if err := xml.Unmarshal(body, &sm); err == nil {
+	var idx sitemapIndex
+	if err := xml.Unmarshal(body, &idx); err == nil && len(idx.Sitemaps) > 0 {
 		c.sitemapMutex.Lock()
-		for _, u := range sm.URLs {
+		for _, s := range idx.Sitemaps {
+			if s.Loc != "" {
+				c.sitemapURLs = append(c.sitemapURLs, s.Loc)
+			}
+		}
+		c.sitemapMutex.Unlock()
+		return
+	}
+
+	var urls urlset
+	if err := xml.Unmarshal(body, &urls); err == nil {
+		c.sitemapMutex.Lock()
+		for _, u := range urls.URLs {
 			if u.Loc != "" {
 				c.sitemapURLs = append(c.sitemapURLs, u.Loc)
 			}
@@ -314,6 +454,26 @@ func (c *Crawler) addResult(status PageStatus) {
 	c.resultsMutex.Lock()
 	defer c.resultsMutex.Unlock()
 	c.results = append(c.results, status)
+}
+
+func (c *Crawler) getCachedContent(body string) string {
+	quickHash := fmt.Sprintf("%x", sha256.Sum256([]byte(body)))[:16]
+
+	c.contentCacheMtx.RLock()
+	cached, exists := c.contentCache[quickHash]
+	c.contentCacheMtx.RUnlock()
+
+	if exists {
+		return cached
+	}
+
+	mainContent := extractMainContent(body)
+
+	c.contentCacheMtx.Lock()
+	c.contentCache[quickHash] = mainContent
+	c.contentCacheMtx.Unlock()
+
+	return mainContent
 }
 
 func extractMainContent(body string) string {
@@ -346,15 +506,18 @@ func extractMainContent(body string) string {
 	return content.String()
 }
 
-func (c *Crawler) checkDuplicateContent(content string, currentURL string) (bool, string) {
-	mainContent := extractMainContent(content)
+func (c *Crawler) checkDuplicateContent(body string, currentURL string) (bool, string) {
+	mainContent := c.getCachedContent(body)
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(mainContent)))
 
 	c.contentHashMutex.Lock()
 	defer c.contentHashMutex.Unlock()
 
 	if originalURL, exists := c.contentHashes[hash]; exists {
-		return true, originalURL
+		if originalURL != currentURL {
+			return true, originalURL
+		}
+		return false, ""
 	}
 
 	c.contentHashes[hash] = currentURL
@@ -362,7 +525,15 @@ func (c *Crawler) checkDuplicateContent(content string, currentURL string) (bool
 }
 
 func (c *Crawler) shouldCrawl(targetURL *url.URL) bool {
-	if targetURL.Host != c.domain {
+	normalizedHost := strings.ToLower(targetURL.Host)
+	if strings.HasPrefix(normalizedHost, "www.") {
+		normalizedHost = normalizedHost[4:]
+	}
+	baseHost := strings.ToLower(c.domain)
+	if strings.HasPrefix(baseHost, "www.") {
+		baseHost = baseHost[4:]
+	}
+	if normalizedHost != baseHost {
 		return false
 	}
 
@@ -382,7 +553,44 @@ func (c *Crawler) shouldCrawl(targetURL *url.URL) bool {
 		}
 	}
 
+	c.depthMutex.Lock()
+	currentDepth := c.depth[targetURL.String()]
+	c.depthMutex.Unlock()
+	if currentDepth > maxCrawlDepth {
+		return false
+	}
+
 	return true
+}
+
+func (c *Crawler) maybePruneMemory() {
+	c.pruneMutex.Lock()
+	defer c.pruneMutex.Unlock()
+
+	if time.Since(c.lastPruneTime) < memoryPruneInterval {
+		return
+	}
+
+	c.visitedMutex.Lock()
+	if len(c.visited) > 10000 {
+		keysToKeep := make([]string, 0)
+		for k := range c.visited {
+			keysToKeep = append(keysToKeep, k)
+		}
+		c.visited = make(map[string]bool)
+		for _, k := range keysToKeep {
+			c.visited[k] = true
+		}
+	}
+	c.visitedMutex.Unlock()
+
+	c.contentCacheMtx.Lock()
+	if len(c.contentCache) > 5000 {
+		c.contentCache = make(map[string]string)
+	}
+	c.contentCacheMtx.Unlock()
+
+	c.lastPruneTime = time.Now()
 }
 
 func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
@@ -395,29 +603,18 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", urlStr, nil)
 	if err != nil {
-		return nil, "", err
+		return &PageStatus{
+			URL:          urlStr,
+			StatusCode:   0,
+			ErrorMessage: err.Error(),
+			ResourceType: "page",
+			LoadTime:     time.Since(startTime),
+		}, "", err
 	}
 
-	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Connection", "keep-alive")
+	c.setRequestHeaders(req)
 
-	redirectCount := 0
-
-	client := &http.Client{
-		Timeout:   requestTimeout,
-		Transport: c.client.Transport,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			redirectCount = len(via)
-			if len(via) >= maxRedirects {
-				return fmt.Errorf("too many redirects")
-			}
-			return nil
-		},
-	}
-
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return &PageStatus{
 			URL:          urlStr,
@@ -430,12 +627,15 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 	defer resp.Body.Close()
 
 	var bodyReader io.Reader = resp.Body
-	if resp.Header.Get("Content-Encoding") == "gzip" {
+	contentEncoding := strings.ToLower(resp.Header.Get("Content-Encoding"))
+	if contentEncoding == "gzip" {
 		gzReader, err := gzip.NewReader(resp.Body)
 		if err == nil {
 			defer gzReader.Close()
 			bodyReader = gzReader
 		}
+	} else if contentEncoding == "br" {
+		bodyReader = brotli.NewReader(resp.Body)
 	}
 
 	body, err := io.ReadAll(bodyReader)
@@ -446,7 +646,6 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 			ErrorMessage: err.Error(),
 			ResourceType: "page",
 			LoadTime:     time.Since(startTime),
-			Redirects:    redirectCount,
 		}, "", err
 	}
 
@@ -465,7 +664,6 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 		ContentType:  resp.Header.Get("Content-Type"),
 		Size:         int64(len(body)),
 		ResourceType: "page",
-		Redirects:    redirectCount,
 		IsHTTPS:      isHTTPS,
 		HTTPVersion:  httpVersion,
 		LoadTime:     loadTime,
@@ -490,7 +688,7 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
 
-	startTime := time.Now()
+	headStart := time.Now()
 
 	req, err := http.NewRequestWithContext(ctx, "HEAD", urlStr, nil)
 	if err != nil {
@@ -499,31 +697,18 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 			StatusCode:   0,
 			ErrorMessage: err.Error(),
 			ResourceType: resourceType,
-			LoadTime:     time.Since(startTime),
+			LoadTime:     time.Since(headStart),
 		})
+		logStatus(urlStr, 0, resourceType, err.Error())
 		return
 	}
 
-	req.Header.Set("User-Agent", userAgent)
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	c.setRequestHeaders(req)
 
-	redirectCount := 0
-
-	client := &http.Client{
-		Timeout:   requestTimeout,
-		Transport: c.client.Transport,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			redirectCount = len(via)
-			if len(via) >= maxRedirects {
-				return fmt.Errorf("too many redirects")
-			}
-			return nil
-		},
-	}
-
-	resp, err := client.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
-		ctx2, cancel2 := context.WithTimeout(context.Background(), requestTimeout)
+		getStart := time.Now()
+		ctx2, cancel2 := context.WithTimeout(ctx, requestTimeout)
 		defer cancel2()
 		req2, err2 := http.NewRequestWithContext(ctx2, "GET", urlStr, nil)
 		if err2 != nil {
@@ -532,25 +717,48 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 				StatusCode:   0,
 				ErrorMessage: err.Error(),
 				ResourceType: resourceType,
-				LoadTime:     time.Since(startTime),
+				LoadTime:     time.Since(headStart),
 			})
 			logStatus(urlStr, 0, resourceType, err.Error())
 			return
 		}
-		req2.Header.Set("User-Agent", userAgent)
-		req2.Header.Set("Accept-Encoding", "gzip, deflate, br")
-		resp, err = client.Do(req2)
+		c.setRequestHeaders(req2)
+		resp, err = c.client.Do(req2)
 		if err != nil {
 			c.addResult(PageStatus{
 				URL:          urlStr,
 				StatusCode:   0,
 				ErrorMessage: err.Error(),
 				ResourceType: resourceType,
-				LoadTime:     time.Since(startTime),
+				LoadTime:     time.Since(headStart),
 			})
 			logStatus(urlStr, 0, resourceType, err.Error())
 			return
 		}
+		defer resp.Body.Close()
+		contentLength := resp.ContentLength
+		if contentLength < 0 {
+			contentLength = 0
+		}
+		loadTime := time.Since(getStart)
+		parsedURL, _ := url.Parse(urlStr)
+		isHTTPS := parsedURL.Scheme == "https"
+		status := PageStatus{
+			URL:          urlStr,
+			StatusCode:   resp.StatusCode,
+			ContentType:  resp.Header.Get("Content-Type"),
+			Size:         contentLength,
+			ResourceType: resourceType,
+			IsHTTPS:      isHTTPS,
+			LoadTime:     loadTime,
+		}
+		c.addResult(status)
+		if resourceType == "image" {
+			logImageStatus(urlStr, resp.StatusCode, contentLength)
+		} else {
+			logStatus(urlStr, resp.StatusCode, resourceType, "")
+		}
+		return
 	}
 	defer resp.Body.Close()
 
@@ -558,8 +766,7 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 	if contentLength < 0 {
 		contentLength = 0
 	}
-
-	loadTime := time.Since(startTime)
+	loadTime := time.Since(headStart)
 	parsedURL, _ := url.Parse(urlStr)
 	isHTTPS := parsedURL.Scheme == "https"
 
@@ -569,7 +776,6 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 		ContentType:  resp.Header.Get("Content-Type"),
 		Size:         contentLength,
 		ResourceType: resourceType,
-		Redirects:    redirectCount,
 		IsHTTPS:      isHTTPS,
 		LoadTime:     loadTime,
 	}
@@ -583,11 +789,20 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 	}
 }
 
-func (c *Crawler) crawlPage(urlStr string) {
+func (c *Crawler) crawlPage(urlStr string, depth int) {
 	defer c.wg.Done()
 
 	if !c.markVisited(urlStr) {
 		return
+	}
+
+	c.depthMutex.Lock()
+	c.depth[urlStr] = depth
+	c.depthMutex.Unlock()
+
+	c.scannedCount++
+	if c.scannedCount%gcInterval == 0 {
+		c.maybePruneMemory()
 	}
 
 	c.semaphore <- struct{}{}
@@ -617,8 +832,7 @@ func (c *Crawler) crawlPage(urlStr string) {
 		return
 	}
 
-	links := extractLinksHTML(body, urlStr)
-	images := extractImagesHTML(body, urlStr)
+	links, images := extractPageAssets(body, urlStr)
 
 	for _, link := range links {
 		parsedLink, err := url.Parse(link)
@@ -631,15 +845,16 @@ func (c *Crawler) crawlPage(urlStr string) {
 			parsedLink.Scheme = c.baseURL.Scheme
 		}
 
+		parsedLink.Fragment = ""
 		fullURL := parsedLink.String()
 
 		if c.shouldCrawl(parsedLink) {
 			c.visitedMutex.RLock()
 			alreadyVisited := c.visited[fullURL]
 			c.visitedMutex.RUnlock()
-			if !alreadyVisited {
+			if !alreadyVisited && depth < maxCrawlDepth {
 				c.wg.Add(1)
-				go c.crawlPage(fullURL)
+				go c.crawlPage(fullURL, depth+1)
 			}
 		} else if parsedLink.Host != c.domain {
 			c.visitedMutex.RLock()
@@ -663,6 +878,7 @@ func (c *Crawler) crawlPage(urlStr string) {
 			parsedImg.Scheme = c.baseURL.Scheme
 		}
 
+		parsedImg.Fragment = ""
 		fullURL := parsedImg.String()
 
 		c.visitedMutex.RLock()
@@ -676,6 +892,9 @@ func (c *Crawler) crawlPage(urlStr string) {
 }
 
 func (c *Crawler) analyzeSEO(status *PageStatus, body string) {
+	if status == nil {
+		return
+	}
 	doc, err := htmlparser.Parse(strings.NewReader(body))
 	if err != nil {
 		return
@@ -702,14 +921,22 @@ func (c *Crawler) analyzeSEO(status *PageStatus, body string) {
 						h1Text.WriteString(child.Data)
 					}
 				}
-				if strings.TrimSpace(h1Text.String()) != "" {
+				if trimmed := strings.TrimSpace(h1Text.String()); trimmed != "" {
 					h1Count++
 				}
 			case "link":
+				var rel, href string
 				for _, attr := range n.Attr {
-					if attr.Key == "rel" && attr.Val == "canonical" {
-						status.HasCanonical = true
+					if attr.Key == "rel" {
+						rel = attr.Val
 					}
+					if attr.Key == "href" {
+						href = attr.Val
+					}
+				}
+				if rel == "canonical" && href != "" {
+					status.HasCanonical = true
+					status.CanonicalURL = href
 				}
 			case "meta":
 				var name, content, property string
@@ -757,7 +984,7 @@ func (c *Crawler) Start() *AuditResult {
 	startURL := c.baseURL.String()
 
 	c.wg.Add(1)
-	go c.crawlPage(startURL)
+	go c.crawlPage(startURL, 0)
 
 	c.wg.Wait()
 
@@ -814,11 +1041,12 @@ func (c *Crawler) analyzeResults() *AuditResult {
 		}
 
 		if result.ResourceType == "page" {
-			if result.Title == "" || len(result.Title) > optimalTitleLength {
+			titleLen := len(result.Title)
+			if result.Title == "" || titleLen < optimalTitleMin || titleLen > optimalTitleMax {
 				audit.SEOIssues = append(audit.SEOIssues, result)
 				seoIssues++
 			}
-			if result.Description == "" || len(result.Description) > optimalDescLength {
+			if result.Description == "" || len(result.Description) > optimalDescMax {
 				audit.MissingMetaTags = append(audit.MissingMetaTags, result)
 				seoIssues++
 			}
@@ -826,6 +1054,8 @@ func (c *Crawler) analyzeResults() *AuditResult {
 				seoIssues++
 			}
 			if !result.HasCanonical {
+				seoIssues++
+			} else if result.CanonicalURL == result.URL {
 				seoIssues++
 			}
 		}
@@ -895,57 +1125,42 @@ func (c *Crawler) analyzeResults() *AuditResult {
 	return audit
 }
 
-func extractLinksHTML(body, baseURL string) []string {
+func extractPageAssets(body, baseURL string) ([]string, []string) {
+	doc, err := htmlparser.Parse(strings.NewReader(body))
+	if err != nil {
+		return nil, nil
+	}
+
 	links := make([]string, 0)
-	doc, err := htmlparser.Parse(strings.NewReader(body))
-	if err != nil {
-		return links
-	}
-
-	var traverse func(*htmlparser.Node)
-	traverse = func(n *htmlparser.Node) {
-		if n.Type == htmlparser.ElementNode && n.Data == "a" {
-			for _, attr := range n.Attr {
-				if attr.Key == "href" {
-					link := attr.Val
-					if link != "" && !strings.HasPrefix(link, "#") &&
-						!strings.HasPrefix(link, "javascript:") &&
-						!strings.HasPrefix(link, "mailto:") &&
-						!strings.HasPrefix(link, "tel:") {
-						absURL := resolveURL(baseURL, link)
-						if absURL != "" {
-							links = append(links, absURL)
-						}
-					}
-				}
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			traverse(c)
-		}
-	}
-
-	traverse(doc)
-	return links
-}
-
-func extractImagesHTML(body, baseURL string) []string {
 	images := make([]string, 0)
-	doc, err := htmlparser.Parse(strings.NewReader(body))
-	if err != nil {
-		return images
-	}
 
 	var traverse func(*htmlparser.Node)
 	traverse = func(n *htmlparser.Node) {
-		if n.Type == htmlparser.ElementNode && n.Data == "img" {
-			for _, attr := range n.Attr {
-				if attr.Key == "src" {
-					img := attr.Val
-					if img != "" && !strings.HasPrefix(img, "data:") {
-						absURL := resolveURL(baseURL, img)
-						if absURL != "" {
-							images = append(images, absURL)
+		if n.Type == htmlparser.ElementNode {
+			if n.Data == "a" {
+				for _, attr := range n.Attr {
+					if attr.Key == "href" {
+						link := attr.Val
+						if link != "" && !strings.HasPrefix(link, "#") &&
+							!strings.HasPrefix(link, "javascript:") &&
+							!strings.HasPrefix(link, "mailto:") &&
+							!strings.HasPrefix(link, "tel:") {
+							absURL := resolveURL(baseURL, link)
+							if absURL != "" {
+								links = append(links, absURL)
+							}
+						}
+					}
+				}
+			} else if n.Data == "img" {
+				for _, attr := range n.Attr {
+					if attr.Key == "src" {
+						img := attr.Val
+						if img != "" && !strings.HasPrefix(img, "data:") {
+							absURL := resolveURL(baseURL, img)
+							if absURL != "" {
+								images = append(images, absURL)
+							}
 						}
 					}
 				}
@@ -957,7 +1172,7 @@ func extractImagesHTML(body, baseURL string) []string {
 	}
 
 	traverse(doc)
-	return images
+	return links, images
 }
 
 func resolveURL(baseURL, targetURL string) string {
@@ -971,15 +1186,20 @@ func resolveURL(baseURL, targetURL string) string {
 		return ""
 	}
 
+	target.Fragment = ""
 	resolved := base.ResolveReference(target)
 	scheme := strings.ToLower(resolved.Scheme)
 	if scheme != "http" && scheme != "https" {
 		return ""
 	}
+	resolved.Fragment = ""
 	return resolved.String()
 }
 
 func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
+	printMutex.Lock()
+	defer printMutex.Unlock()
+
 	var color string
 	var symbol string
 
@@ -1004,8 +1224,8 @@ func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
 	}
 
 	displayURL := urlStr
-	if len(displayURL) > 80 {
-		displayURL = displayURL[:77] + "..."
+	if len(displayURL) > maxURLLength {
+		displayURL = displayURL[:truncatedURLLength] + "..."
 	}
 
 	if errorMsg != "" {
@@ -1016,6 +1236,9 @@ func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
 }
 
 func logImageStatus(urlStr string, statusCode int, size int64) {
+	printMutex.Lock()
+	defer printMutex.Unlock()
+
 	var color string
 	var symbol string
 	var message string
@@ -1043,8 +1266,8 @@ func logImageStatus(urlStr string, statusCode int, size int64) {
 	}
 
 	displayURL := urlStr
-	if len(displayURL) > 60 {
-		displayURL = displayURL[:57] + "..."
+	if len(displayURL) > shortURLLength {
+		displayURL = displayURL[:shortTruncatedLength] + "..."
 	}
 
 	fmt.Printf("%s[%s IMG] %s - %s%s\n", color, symbol, displayURL, message, colorReset)
@@ -1632,12 +1855,33 @@ func main() {
 	displayASCIIBanner()
 
 	if len(os.Args) < 2 {
-		fmt.Println(colorRed + "Usage: go run huntcat.go <website-url>" + colorReset)
+		fmt.Println(colorRed + "Usage: go run huntcat.go <website-url> [options]" + colorReset)
 		fmt.Println(colorYellow + "Example: go run huntcat.go https://example.com" + colorReset)
+		fmt.Println(colorYellow + "Options:" + colorReset)
+		fmt.Println(colorYellow + "  --cookie=<value>       Set authentication cookie" + colorReset)
+		fmt.Println(colorYellow + "  --token=<value>        Set Bearer token" + colorReset)
+		fmt.Println(colorYellow + "  --header=<k:v>         Add custom header (repeatable)" + colorReset)
 		os.Exit(1)
 	}
 
 	targetURL := os.Args[1]
+	opts := make([]CrawlerOption, 0)
+
+	for _, arg := range os.Args[2:] {
+		if strings.HasPrefix(arg, "--cookie=") {
+			opts = append(opts, WithAuthCookie(strings.TrimPrefix(arg, "--cookie=")))
+		} else if strings.HasPrefix(arg, "--token=") {
+			opts = append(opts, WithAuthToken(strings.TrimPrefix(arg, "--token=")))
+		} else if strings.HasPrefix(arg, "--header=") {
+			kv := strings.TrimPrefix(arg, "--header=")
+			parts := strings.SplitN(kv, ":", 2)
+			if len(parts) == 2 {
+				opts = append(opts, WithCustomHeaders(map[string]string{
+					strings.TrimSpace(parts[0]): strings.TrimSpace(parts[1]),
+				}))
+			}
+		}
+	}
 
 	fmt.Printf("%s🎯 Target: %s%s\n", colorCyan, targetURL, colorReset)
 	fmt.Printf("%s⚡ Initializing HuntCat with %d concurrent workers...%s\n", colorGreen, maxConcurrency, colorReset)
@@ -1646,7 +1890,7 @@ func main() {
 
 	startTime := time.Now()
 
-	crawler, err := NewCrawler(targetURL)
+	crawler, err := NewCrawler(targetURL, opts...)
 	if err != nil {
 		fmt.Printf("%s✗ Error initializing crawler: %s%s\n", colorRed, err, colorReset)
 		os.Exit(1)
