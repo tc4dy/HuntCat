@@ -234,26 +234,26 @@ SEO Score                  68.3%    Good
 
 HuntCat/
 │
-├── 📄 huntcat.go # Single-file version (for end users)
+├── 📄 huntcat.go                    # Single-file version (for end users)
 │
 ├── 📁 For Developers (Discrete Modular)/
-│ ├── 📄 main.go
-│ ├── 📄 crawler.go
-│ ├── 📄 constants.go
-│ ├── 📄 colors.go
-│ ├── 📄 page_status.go
-│ ├── 📄 http_client.go
-│ ├── 📄 parsers.go
-│ ├── 📄 reports.go
-│ ├── 📄 utils.go
-│ ├── 📄 go.mod
-│ ├── 📄 go.sum
-│ └── 📄 README.txt # Warning for developers
+│   ├── 📄 main.go
+│   ├── 📄 crawler.go
+│   ├── 📄 constants.go
+│   ├── 📄 colors.go
+│   ├── 📄 page_status.go
+│   ├── 📄 http_client.go
+│   ├── 📄 parsers.go
+│   ├── 📄 reports.go
+│   ├── 📄 utils.go
+│   ├── 📄 go.mod
+│   ├── 📄 go.sum
+│   └── 📄 README.txt                # Warning for developers
 │
-├── 📄 README.md # Main documentation
-├── 📄 LICENSE # MIT License
-├── 📄 .gitignore # Git ignore rules
-└── 🖼️ huntcat-banner.svg # Project banner
+├── 📄 README.md                     # Main documentation
+├── 📄 LICENSE                       # MIT License
+├── 📄 .gitignore                    # Git ignore rules
+└── 🖼️ huntcat-banner.svg            # Project banner
 
 ### 📌 **File Descriptions**
 
