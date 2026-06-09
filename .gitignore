@@ -1,23 +1,59 @@
-# Compiled binaries
+# Binaries
 huntcat
 huntcat.exe
+huntcat-*
 *.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
 
-# Generated reports
+# Build artifacts
+dist/
+bin/
+tmp/
+
+# Reports
 huntcat_report.html
 huntcat_report.csv
-*.html
-*.csv
 
-# OS files
-.DS_Store
-Thumbs.db
+# Go specific
+*.out
+*.prof
+*.cover
+coverage.html
+coverage.out
+*.work
 
-# IDE files
-.vscode/
+# Dependency directories (Go modules)
+vendor/
+
+# IDE
 .idea/
+.vscode/
 *.swp
 *.swo
+*~
+.DS_Store
 
-# Go workspace
-vendor/
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Debug files
+__debug_bin
+__debug_bin.exe
+
+# Temporary files
+tmp/
+temp/
