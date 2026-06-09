@@ -1,17 +1,22 @@
 ![HuntCat Banner](huntcat-banner.svg)
 
+## **Warning 🔴** 
+
+**huntcat.go** is intended for regular users. If you’re a developer and want to explore the code more thoroughly, you can access the main file structure **(main.go, crawler.go, constants.go, colors.go, page_status.go, http_client.go, parsers.go, reports.go, utils.go, go.mod)** in the **“For Developers (Discrete Modular)”** folder. 🎨📊
+
 # 🐱 HuntCat
 **Enterprise-Grade Web Audit & SEO Crawler**
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](https://github.com)
+[![Made with Go](https://img.shields.io/badge/Made%20with-Go-1E90BE?style=for-the-badge&logo=go)](https://go.dev/)
+[![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
+[![Awesome Go](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/avelino/awesome-go)
 
 *"Leave your cats in the area and enjoy!"*
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Reports](#-reports) 
-
-</div>
 
 ---
 
@@ -97,7 +102,7 @@ go build -o huntcat huntcat.go
 
 ### **One-Liner Install (Unix/Linux/macOS)**
 ```bash
-curl -sSL https://raw.githubusercontent.com/tc4dy/HuntCat | bash
+curl -sSL https://raw.githubusercontent.com/tc4dy/HuntCat/main/huntcat.go -o huntcat.go
 ```
 
 ---
@@ -144,10 +149,10 @@ HuntCat generates **2 comprehensive reports** after each scan:
 **Preview:**
 ```
 ┌─────────────────────────────────────────┐
-│  Health Score:       100%  🟢          │
-│  SEO Score:           45%  🔴          │
-│  Performance Score:   92%  🟡          │
-│  Security Score:     100%  🟢          │
+│  Health Score:       100%  🟢           │
+│  SEO Score:           45%  🔴           │
+│  Performance Score:   92%  🟡           │
+│  Security Score:     100%  🟢           │
 └─────────────────────────────────────────┘
 ```
 
@@ -166,17 +171,17 @@ HuntCat generates **2 comprehensive reports** after each scan:
 │                    HuntCat Engine                       │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │   Crawler    │  │   Analyzer   │  │   Reporter   │ │
-│  │              │  │              │  │              │ │
-│  │ • Link Disc. │  │ • SEO Check  │  │ • HTML Gen   │ │
-│  │ • Asset Find │  │ • Perf Audit │  │ • CSV Export │ │
-│  │ • Robots.txt │  │ • Security   │  │ • Scoring    │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │   Crawler    │  │   Analyzer   │  │   Reporter   │   │
+│  │              │  │              │  │              │   │
+│  │ • Link Disc. │  │ • SEO Check  │  │ • HTML Gen   │   │
+│  │ • Asset Find │  │ • Perf Audit │  │ • CSV Export │   │
+│  │ • Robots.txt │  │ • Security   │  │ • Scoring    │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘   │
 │                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  Concurrency Engine (WaitGroup + Semaphore)     │   │
-│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  Concurrency Engine (WaitGroup + Semaphore)     │    │
+│  └─────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -246,5 +251,3 @@ const (
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
 Made with 🐱 Go Lang
-
-</div>
