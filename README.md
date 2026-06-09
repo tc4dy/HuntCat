@@ -18,7 +18,7 @@
 
 *"Leave your cats in the area and enjoy!"*
 
-[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Reports](#-reports) 
+[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Reports](#-reports) • [Structure](#-repository-structure)
 
 ---
 
