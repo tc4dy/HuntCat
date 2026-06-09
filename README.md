@@ -230,6 +230,42 @@ SEO Score                  68.3%    Good
 ✓ CSV report saved: huntcat_report.csv
 ```
 
+## 📁 Repository Structure
+
+HuntCat/
+│
+├── 📄 huntcat.go # Single-file version (for end users)
+│
+├── 📁 For Developers (Discrete Modular)/
+│ ├── 📄 main.go
+│ ├── 📄 crawler.go
+│ ├── 📄 constants.go
+│ ├── 📄 colors.go
+│ ├── 📄 page_status.go
+│ ├── 📄 http_client.go
+│ ├── 📄 parsers.go
+│ ├── 📄 reports.go
+│ ├── 📄 utils.go
+│ ├── 📄 go.mod
+│ ├── 📄 go.sum
+│ └── 📄 README.txt # Warning for developers
+│
+├── 📄 README.md # Main documentation
+├── 📄 LICENSE # MIT License
+├── 📄 .gitignore # Git ignore rules
+└── 🖼️ huntcat-banner.svg # Project banner
+
+### 📌 **File Descriptions**
+
+| File | Description |
+|------|-------------|
+| `huntcat.go` | **Single-file version** - Just download and run `go run huntcat.go <url>` |
+| `For Developers (Discrete Modular)/` | **Modular source code** - For contributors and curious developers |
+| `README.md` | **Documentation** - You're reading it! |
+| `LICENSE` | **MIT License** - Open source, free to use |
+| `.gitignore` | **Git ignore rules** - Keeps the repo clean |
+| `huntcat-banner.svg` | **Project banner** - Visual identity |
+
 ---
 
 ## ⚙️ **Configuration**
@@ -251,5 +287,3 @@ const (
 ## 📜 **License**
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-Made with 🐱 Go Lang
