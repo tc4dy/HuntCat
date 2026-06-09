@@ -233,27 +233,24 @@ SEO Score                  68.3%    Good
 ## 📁 Repository Structure
 
 HuntCat/
-│
-├── 📄 huntcat.go                    # Single-file version (for end users)
-│
-├── 📁 For Developers (Discrete Modular)/
-│   ├── 📄 main.go
-│   ├── 📄 crawler.go
-│   ├── 📄 constants.go
-│   ├── 📄 colors.go
-│   ├── 📄 page_status.go
-│   ├── 📄 http_client.go
-│   ├── 📄 parsers.go
-│   ├── 📄 reports.go
-│   ├── 📄 utils.go
-│   ├── 📄 go.mod
-│   ├── 📄 go.sum
-│   └── 📄 README.txt                # Warning for developers
-│
-├── 📄 README.md                     # Main documentation
-├── 📄 LICENSE                       # MIT License
-├── 📄 .gitignore                    # Git ignore rules
-└── 🖼️ huntcat-banner.svg            # Project banner
+├── huntcat.go
+├── For Developers (Discrete Modular)/
+│   ├── main.go
+│   ├── crawler.go
+│   ├── constants.go
+│   ├── colors.go
+│   ├── page_status.go
+│   ├── http_client.go
+│   ├── parsers.go
+│   ├── reports.go
+│   ├── utils.go
+│   ├── go.mod
+│   ├── go.sum
+│   └── README.txt
+├── README.md
+├── LICENSE
+├── .gitignore
+└── huntcat-banner.svg
 
 ### 📌 **File Descriptions**
 
