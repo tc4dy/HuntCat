@@ -14,7 +14,6 @@
 [![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
 [![GitHub Stars](https://img.shields.io/github/stars/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/network/members)
-[![GitHub Issues](https://img.shields.io/github/issues/tc4dy/HuntCat?style=for-the-badge&logo=github)](https://github.com/tc4dy/HuntCat/issues)
 
 *"Leave your cats in the area and enjoy!"*
 
