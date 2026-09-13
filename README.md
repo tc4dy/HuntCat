@@ -1,11 +1,11 @@
 ![HuntCat Banner](huntcat-banner.svg)
 
-## **Warning!** 
-
-**huntcat.go** is intended for regular users. If you’re a developer and want to explore the code more thoroughly, you can access the main file structure **(main.go, crawler.go, constants.go, colors.go, page_status.go, http_client.go, parsers.go, reports.go, utils.go, go.mod)** in the **“For Developers (Discrete Modular)”** folder. 🎨📊
-
 # HuntCat [![Awesome Go](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/avelino/awesome-go)
 **Enterprise-Grade Web Audit & SEO Crawler**
+
+## **Warning!** 
+
+**huntcat.go** is intended for regular users. If you’re a developer and want to explore the code more thoroughly, you can access the main file structure 💾 **(main.go, crawler.go, constants.go, colors.go, page_status.go, http_client.go, parsers.go, reports.go, utils.go, go.mod)** in the **“For Developers (Discrete Modular)”** folder. 🔨
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
