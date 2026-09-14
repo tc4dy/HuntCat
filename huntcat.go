@@ -1205,22 +1205,22 @@ func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
 
 	if errorMsg != "" {
 		color = colorRed
-		symbol = "✗"
+		symbol = "[-]"
 	} else if statusCode == 404 {
 		color = colorRed
-		symbol = "✗"
+		symbol = "[-]"
 	} else if statusCode >= 500 {
 		color = colorBoldRed
-		symbol = "✗"
+		symbol = "[!]"
 	} else if statusCode >= 300 && statusCode < 400 {
 		color = colorYellow
-		symbol = "↻"
+		symbol = "[~]"
 	} else if statusCode == 200 {
 		color = colorGreen
-		symbol = "✓"
+		symbol = "[+]"
 	} else {
 		color = colorWhite
-		symbol = "•"
+		symbol = "[*]"
 	}
 
 	displayURL := urlStr
@@ -1229,9 +1229,9 @@ func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
 	}
 
 	if errorMsg != "" {
-		fmt.Printf("%s[%s %3d] %s (%s)%s\n", color, symbol, statusCode, displayURL, errorMsg, colorReset)
+		fmt.Printf("%s%s %3d %s (%s)%s\n", color, symbol, statusCode, displayURL, errorMsg, colorReset)
 	} else {
-		fmt.Printf("%s[%s %3d] %s%s\n", color, symbol, statusCode, displayURL, colorReset)
+		fmt.Printf("%s%s %3d %s%s\n", color, symbol, statusCode, displayURL, colorReset)
 	}
 }
 
@@ -1245,23 +1245,23 @@ func logImageStatus(urlStr string, statusCode int, size int64) {
 
 	if statusCode != 200 {
 		color = colorRed
-		symbol = "✗"
+		symbol = "[-]"
 		message = "Failed to load"
 	} else if size >= criticalImageThreshold {
 		color = colorBoldRed
-		symbol = "🛑"
+		symbol = "[!]"
 		message = fmt.Sprintf("CRITICAL: %.2f MB - Immediate optimization required!", float64(size)/(1024*1024))
 	} else if size >= hugeImageThreshold {
 		color = colorOrange
-		symbol = "⚠"
+		symbol = "[!]"
 		message = fmt.Sprintf("WARNING: %.2f MB - Must be optimized", float64(size)/(1024*1024))
 	} else if size >= largeImageThreshold {
 		color = colorYellow
-		symbol = "💡"
+		symbol = "[*]"
 		message = fmt.Sprintf("ADVICE: %.2f KB - Consider optimizing", float64(size)/1024)
 	} else {
 		color = colorGreen
-		symbol = "✓"
+		symbol = "[+]"
 		message = fmt.Sprintf("OK: %.2f KB", float64(size)/1024)
 	}
 
@@ -1270,7 +1270,7 @@ func logImageStatus(urlStr string, statusCode int, size int64) {
 		displayURL = displayURL[:shortTruncatedLength] + "..."
 	}
 
-	fmt.Printf("%s[%s IMG] %s - %s%s\n", color, symbol, displayURL, message, colorReset)
+	fmt.Printf("%s%s IMG %s - %s%s\n", color, symbol, displayURL, message, colorReset)
 }
 
 func clearScreen() {
@@ -1329,72 +1329,72 @@ func displaySummaryReport(audit *AuditResult) {
 	fmt.Fprintln(w, colorBoldGreen+"METRIC\tVALUE\tSTATUS"+colorReset)
 	fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
 
-	fmt.Fprintf(w, "Total Resources Scanned\t%d\t%s✓ Complete%s\n", audit.TotalScanned, colorGreen, colorReset)
+	fmt.Fprintf(w, "Total Resources Scanned\t%d\t%s[+] Complete%s\n", audit.TotalScanned, colorGreen, colorReset)
 
 	if len(audit.BrokenLinks) > 0 {
-		fmt.Fprintf(w, "Broken Links (404)\t%d\t%s✗ Critical%s\n", len(audit.BrokenLinks), colorRed, colorReset)
+		fmt.Fprintf(w, "Broken Links (404)\t%d\t%s[-] Critical%s\n", len(audit.BrokenLinks), colorRed, colorReset)
 	} else {
-		fmt.Fprintf(w, "Broken Links (404)\t%d\t%s✓ Excellent%s\n", len(audit.BrokenLinks), colorGreen, colorReset)
+		fmt.Fprintf(w, "Broken Links (404)\t%d\t%s[+] Excellent%s\n", len(audit.BrokenLinks), colorGreen, colorReset)
 	}
 
 	if len(audit.ServerErrors) > 0 {
-		fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s✗ Critical%s\n", len(audit.ServerErrors), colorBoldRed, colorReset)
+		fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s[-] Critical%s\n", len(audit.ServerErrors), colorBoldRed, colorReset)
 	} else {
-		fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s✓ Excellent%s\n", len(audit.ServerErrors), colorGreen, colorReset)
+		fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s[+] Excellent%s\n", len(audit.ServerErrors), colorGreen, colorReset)
 	}
 
 	if len(audit.RedirectChains) > 0 {
-		fmt.Fprintf(w, "Redirect Chains\t%d\t%s⚠ Warning%s\n", len(audit.RedirectChains), colorYellow, colorReset)
+		fmt.Fprintf(w, "Redirect Chains\t%d\t%s[!] Warning%s\n", len(audit.RedirectChains), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Redirect Chains\t%d\t%s✓ Good%s\n", len(audit.RedirectChains), colorGreen, colorReset)
+		fmt.Fprintf(w, "Redirect Chains\t%d\t%s[+] Good%s\n", len(audit.RedirectChains), colorGreen, colorReset)
 	}
 
 	if len(audit.CriticalAssets) > 0 {
-		fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s🛑 URGENT%s\n", len(audit.CriticalAssets), colorBoldRed, colorReset)
+		fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s[!] URGENT%s\n", len(audit.CriticalAssets), colorBoldRed, colorReset)
 	} else {
-		fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s✓ Excellent%s\n", len(audit.CriticalAssets), colorGreen, colorReset)
+		fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s[+] Excellent%s\n", len(audit.CriticalAssets), colorGreen, colorReset)
 	}
 
 	if len(audit.WarningAssets) > 0 {
-		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s⚠ Optimize%s\n", len(audit.WarningAssets), colorOrange, colorReset)
+		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[!] Optimize%s\n", len(audit.WarningAssets), colorOrange, colorReset)
 	} else {
-		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s✓ Good%s\n", len(audit.WarningAssets), colorGreen, colorReset)
+		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[+] Good%s\n", len(audit.WarningAssets), colorGreen, colorReset)
 	}
 
 	if len(audit.AdviceAssets) > 0 {
-		fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s💡 Consider%s\n", len(audit.AdviceAssets), colorYellow, colorReset)
+		fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s[*] Consider%s\n", len(audit.AdviceAssets), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s✓ Good%s\n", len(audit.AdviceAssets), colorGreen, colorReset)
+		fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s[+] Good%s\n", len(audit.AdviceAssets), colorGreen, colorReset)
 	}
 
 	if len(audit.DuplicateContent) > 0 {
-		fmt.Fprintf(w, "Duplicate Content\t%d\t%s⚠ SEO Issue%s\n", len(audit.DuplicateContent), colorYellow, colorReset)
+		fmt.Fprintf(w, "Duplicate Content\t%d\t%s[!] SEO Issue%s\n", len(audit.DuplicateContent), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Duplicate Content\t%d\t%s✓ Excellent%s\n", len(audit.DuplicateContent), colorGreen, colorReset)
+		fmt.Fprintf(w, "Duplicate Content\t%d\t%s[+] Excellent%s\n", len(audit.DuplicateContent), colorGreen, colorReset)
 	}
 
 	if len(audit.NonHTTPS) > 0 {
-		fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s⚠ Security Risk%s\n", len(audit.NonHTTPS), colorOrange, colorReset)
+		fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s[!] Security Risk%s\n", len(audit.NonHTTPS), colorOrange, colorReset)
 	} else {
-		fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s✓ Secure%s\n", len(audit.NonHTTPS), colorGreen, colorReset)
+		fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s[+] Secure%s\n", len(audit.NonHTTPS), colorGreen, colorReset)
 	}
 
 	if len(audit.MissingMetaTags) > 0 {
-		fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s⚠ SEO Issue%s\n", len(audit.MissingMetaTags), colorYellow, colorReset)
+		fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s[!] SEO Issue%s\n", len(audit.MissingMetaTags), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s✓ Good%s\n", len(audit.MissingMetaTags), colorGreen, colorReset)
+		fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s[+] Good%s\n", len(audit.MissingMetaTags), colorGreen, colorReset)
 	}
 
 	if len(audit.SitemapURLs) > 0 {
-		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s✓ Detected%s\n", len(audit.SitemapURLs), colorGreen, colorReset)
+		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[+] Detected%s\n", len(audit.SitemapURLs), colorGreen, colorReset)
 	} else {
-		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s⚠ Not Found%s\n", len(audit.SitemapURLs), colorYellow, colorReset)
+		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[!] Not Found%s\n", len(audit.SitemapURLs), colorYellow, colorReset)
 	}
 
 	if audit.RobotsAllowed {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s✓ Compliant%s\n", colorGreen, colorReset)
+		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[+] Compliant%s\n", colorGreen, colorReset)
 	} else {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s⚠ Issues%s\n", colorYellow, colorReset)
+		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[!] Issues%s\n", colorYellow, colorReset)
 	}
 
 	fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
@@ -1633,7 +1633,7 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🐱 HuntCat</h1>
+            <h1>HuntCat</h1>
             <div class="subtitle">Enterprise Web Audit & SEO Crawler Report</div>
             <div class="dev">Dev: @tc4dy</div>
         </div>
@@ -1883,20 +1883,20 @@ func main() {
 		}
 	}
 
-	fmt.Printf("%s🎯 Target: %s%s\n", colorCyan, targetURL, colorReset)
-	fmt.Printf("%s⚡ Initializing HuntCat with %d concurrent workers...%s\n", colorGreen, maxConcurrency, colorReset)
-	fmt.Printf("%s🤖 Fetching robots.txt and sitemap.xml...%s\n", colorMagenta, colorReset)
-	fmt.Printf("%s🔒 Enforcing rate limiting (%dms/request)...%s\n\n", colorBlue, rateLimitDelay.Milliseconds(), colorReset)
+	fmt.Printf("%s[*] Target: %s%s\n", colorCyan, targetURL, colorReset)
+	fmt.Printf("%s[+] Initializing HuntCat with %d concurrent workers...%s\n", colorGreen, maxConcurrency, colorReset)
+	fmt.Printf("%s[*] Fetching robots.txt and sitemap.xml...%s\n", colorMagenta, colorReset)
+	fmt.Printf("%s[*] Enforcing rate limiting (%dms/request)...%s\n\n", colorBlue, rateLimitDelay.Milliseconds(), colorReset)
 
 	startTime := time.Now()
 
 	crawler, err := NewCrawler(targetURL, opts...)
 	if err != nil {
-		fmt.Printf("%s✗ Error initializing crawler: %s%s\n", colorRed, err, colorReset)
+		fmt.Printf("%s[-] Error initializing crawler: %s%s\n", colorRed, err, colorReset)
 		os.Exit(1)
 	}
 
-	fmt.Printf("%s🔍 Starting deep crawl with SEO analysis...%s\n\n", colorBoldCyan, colorReset)
+	fmt.Printf("%s[*] Starting deep crawl with SEO analysis...%s\n\n", colorBoldCyan, colorReset)
 
 	audit := crawler.Start()
 
@@ -1904,23 +1904,23 @@ func main() {
 
 	displaySummaryReport(audit)
 
-	fmt.Printf("\n%s⏱  Crawl completed in: %s%s\n", colorCyan, duration.Round(time.Millisecond), colorReset)
+	fmt.Printf("\n%s[*] Crawl completed in: %s%s\n", colorCyan, duration.Round(time.Millisecond), colorReset)
 
-	fmt.Printf("\n%s📄 Generating HTML report...%s\n", colorCyan, colorReset)
+	fmt.Printf("\n%s[*] Generating HTML report...%s\n", colorCyan, colorReset)
 	if err := exportHTMLReport(audit, targetURL); err != nil {
-		fmt.Printf("%s✗ Error generating HTML report: %s%s\n", colorRed, err, colorReset)
+		fmt.Printf("%s[-] Error generating HTML report: %s%s\n", colorRed, err, colorReset)
 	} else {
-		fmt.Printf("%s✓ HTML report saved: huntcat_report.html%s\n", colorGreen, colorReset)
+		fmt.Printf("%s[+] HTML report saved: huntcat_report.html%s\n", colorGreen, colorReset)
 	}
 
-	fmt.Printf("%s📊 Generating CSV report...%s\n", colorCyan, colorReset)
+	fmt.Printf("%s[*] Generating CSV report...%s\n", colorCyan, colorReset)
 	if err := exportCSVReport(audit); err != nil {
-		fmt.Printf("%s✗ Error generating CSV report: %s%s\n", colorRed, err, colorReset)
+		fmt.Printf("%s[-] Error generating CSV report: %s%s\n", colorRed, err, colorReset)
 	} else {
-		fmt.Printf("%s✓ CSV report saved: huntcat_report.csv%s\n", colorGreen, colorReset)
+		fmt.Printf("%s[+] CSV report saved: huntcat_report.csv%s\n", colorGreen, colorReset)
 	}
 
 	fmt.Println()
-	fmt.Printf("%s🐱 HuntCat hunt completed! Thank you for using HuntCat.%s\n", colorBoldGreen, colorReset)
+	fmt.Printf("%s[+] HuntCat hunt completed! Thank you for using HuntCat.%s\n", colorBoldGreen, colorReset)
 	fmt.Println()
 }
