@@ -39,22 +39,22 @@ func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
 
 	if errorMsg != "" {
 		color = colorRed
-		symbol = "✗"
+		symbol = "[-]"
 	} else if statusCode == 404 {
 		color = colorRed
-		symbol = "✗"
+		symbol = "[-]"
 	} else if statusCode >= 500 {
 		color = colorBoldRed
-		symbol = "✗"
+		symbol = "[!]"
 	} else if statusCode >= 300 && statusCode < 400 {
 		color = colorYellow
-		symbol = "↻"
+		symbol = "[~]"
 	} else if statusCode == 200 {
 		color = colorGreen
-		symbol = "✓"
+		symbol = "[+]"
 	} else {
 		color = colorWhite
-		symbol = "•"
+		symbol = "[*]"
 	}
 
 	displayURL := urlStr
@@ -63,9 +63,9 @@ func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
 	}
 
 	if errorMsg != "" {
-		fmt.Printf("%s[%s %3d] %s (%s)%s\n", color, symbol, statusCode, displayURL, errorMsg, colorReset)
+		fmt.Printf("%s%s %3d %s (%s)%s\n", color, symbol, statusCode, displayURL, errorMsg, colorReset)
 	} else {
-		fmt.Printf("%s[%s %3d] %s%s\n", color, symbol, statusCode, displayURL, colorReset)
+		fmt.Printf("%s%s %3d %s%s\n", color, symbol, statusCode, displayURL, colorReset)
 	}
 }
 
@@ -79,23 +79,23 @@ func logImageStatus(urlStr string, statusCode int, size int64) {
 
 	if statusCode != 200 {
 		color = colorRed
-		symbol = "✗"
+		symbol = "[-]"
 		message = "Failed to load"
 	} else if size >= criticalImageThreshold {
 		color = colorBoldRed
-		symbol = "🛑"
+		symbol = "[!]"
 		message = fmt.Sprintf("CRITICAL: %.2f MB - Immediate optimization required!", float64(size)/(1024*1024))
 	} else if size >= hugeImageThreshold {
 		color = colorOrange
-		symbol = "⚠"
+		symbol = "[!]"
 		message = fmt.Sprintf("WARNING: %.2f MB - Must be optimized", float64(size)/(1024*1024))
 	} else if size >= largeImageThreshold {
 		color = colorYellow
-		symbol = "💡"
+		symbol = "[*]"
 		message = fmt.Sprintf("ADVICE: %.2f KB - Consider optimizing", float64(size)/1024)
 	} else {
 		color = colorGreen
-		symbol = "✓"
+		symbol = "[+]"
 		message = fmt.Sprintf("OK: %.2f KB", float64(size)/1024)
 	}
 
@@ -104,7 +104,7 @@ func logImageStatus(urlStr string, statusCode int, size int64) {
 		displayURL = displayURL[:shortTruncatedLength] + "..."
 	}
 
-	fmt.Printf("%s[%s IMG] %s - %s%s\n", color, symbol, displayURL, message, colorReset)
+	fmt.Printf("%s%s IMG %s - %s%s\n", color, symbol, displayURL, message, colorReset)
 }
 
 func clearScreen() {
