@@ -21,23 +21,23 @@
 
 ---
 
-## 🎯 **Overview**
+## **Overview**
 
 **HuntCat** is a blazing-fast, enterprise-grade web crawler and SEO auditor built in pure Go. Designed for technical SEO professionals, web developers, and DevOps teams who demand **speed**, **accuracy**, and **actionable insights**.
 
 ### Why HuntCat?
 
-- ⚡ **Ultra-Fast**: Concurrent crawling with 50+ workers
-- 🎨 **Beautiful Reports**: Professional HTML + CSV exports
-- 🔒 **Security-First**: TLS 1.2+, HTTP/2 support, HTTPS validation
-- 🤖 **SEO Intelligence**: Meta tags, canonicals, structured data detection
-- 🚦 **Polite Crawling**: robots.txt compliance, rate limiting
-- 🧠 **Smart Detection**: Duplicate content via SHA-256 hashing
-- 📊 **4D Scoring System**: Health, SEO, Performance, Security
+- [+] **Ultra-Fast**: Concurrent crawling with 50+ workers
+- [+] **Beautiful Reports**: Professional HTML + CSV exports
+- [+] **Security-First**: TLS 1.2+, HTTP/2 support, HTTPS validation
+- [+] **SEO Intelligence**: Meta tags, canonicals, structured data detection
+- [+] **Polite Crawling**: robots.txt compliance, rate limiting
+- [+] **Smart Detection**: Duplicate content via SHA-256 hashing
+- [+] **4D Scoring System**: Health, SEO, Performance, Security
 
 ---
 
-## ✨ **Features**
+## [$] **Features**
 
 ### 🕷️ **Advanced Crawling**
 - Recursive link discovery with intelligent depth control
@@ -78,7 +78,7 @@ Security Score    = HTTPS coverage + TLS compliance
 
 ---
 
-## 🚀 **Installation**
+## [%] **Installation**
 
 ### **Prerequisites**
 - [Go 1.22+](https://go.dev/dl/) installed
