@@ -5,7 +5,7 @@
 
 ## **Warning!**
 **(With Modular & Standalone Mods for developers and users.)**
-**huntcat.go** is intended for regular users. If you're a developer and want to explore the code more thoroughly, you can access the main file structure 💾 **(main.go, crawler.go, constants.go, colors.go, page_status.go, http_client.go, parsers.go, reports.go, utils.go, go.mod)** in the **"For Developers (Discrete Modular)"** folder. 🔨
+**huntcat.go** is intended for regular users. If you're a developer and want to explore the code more thoroughly, you can access the main file structure **(main.go, crawler.go, constants.go, colors.go, page_status.go, http_client.go, parsers.go, reports.go, utils.go, go.mod)** in the **"For Developers (Discrete Modular)"** folder.
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -21,7 +21,7 @@
 
 ---
 
-## **Overview**
+## **> Overview**
 
 **HuntCat** is a blazing-fast, enterprise-grade web crawler and SEO auditor built in pure Go. Designed for technical SEO professionals, web developers, and DevOps teams who demand **speed**, **accuracy**, and **actionable insights**.
 
@@ -39,21 +39,21 @@
 
 ## [$] **Features**
 
-### 🕷️ **Advanced Crawling**
+### [+] **Advanced Crawling**
 - Recursive link discovery with intelligent depth control
 - Concurrent processing (up to 100 workers)
 - Automatic sitemap.xml parsing
 - External link validation (HEAD requests)
 - Image asset optimization analysis
 
-### 🩺 **Health Monitoring**
+### [+] **Health Monitoring**
 - **404 Detection**: Broken link identification
 - **5xx Errors**: Server-side issue tracking
 - **Redirect Chains**: 301/302 loop detection
 - **Asset Analysis**: Image size optimization (700KB/1MB/2MB thresholds)
 - **Load Time Tracking**: Per-resource performance metrics
 
-### 🔍 **SEO Audit Engine**
+### [+] **SEO Audit Engine**
 - Title tag validation (optimal: 50-60 chars)
 - Meta description analysis (optimal: 120-160 chars)
 - H1 tag counting (best practice: exactly 1)
@@ -62,13 +62,13 @@
 - Structured Data (JSON-LD) detection
 - Meta robots tag inspection
 
-### 🛡️ **Security Checks**
+### [+] **Security Checks**
 - HTTPS enforcement validation
 - HTTP/2 protocol detection
 - TLS version verification (>= 1.2)
 - Non-secure page flagging
 
-### 📈 **Intelligent Scoring**
+### [+] **Intelligent Scoring**
 ```
 Health Score      = (100 - error_rate)
 SEO Score         = Meta tag compliance + structural quality
@@ -78,7 +78,7 @@ Security Score    = HTTPS coverage + TLS compliance
 
 ---
 
-## [%] **Installation**
+## [<>] **Installation**
 
 ### **Prerequisites**
 - [Go 1.22+](https://go.dev/dl/) installed
@@ -108,7 +108,7 @@ curl -sSL https://raw.githubusercontent.com/tc4dy/HuntCat/main/huntcat.go -o hun
 
 ---
 
-## 📖 **Usage**
+## [<\>] **Usage**
 
 HuntCat ships in two forms: a **Standalone** single file for end users, and a **Discrete Modular** structure for developers. Both are functionally identical — the same Go code, just organized differently.
 
@@ -181,7 +181,7 @@ go run *.go https://example.com --header="X-API-Key: mykey"
 
 ---
 
-## 📊 **Reports**
+## [!] **Reports**
 
 HuntCat generates **2 comprehensive reports** after each scan:
 
@@ -208,7 +208,7 @@ HuntCat generates **2 comprehensive reports** after each scan:
 
 ---
 
-## 🏗️ **Architecture**
+## [ARC] **Architecture**
 
 ### **Core Components**
 ```
@@ -239,7 +239,7 @@ HuntCat generates **2 comprehensive reports** after each scan:
 
 ---
 
-## 🎨 **Screenshots**
+## [<>] **Examples**
 
 ### Terminal Output
 ```
@@ -273,7 +273,7 @@ HTML report saved: huntcat_report.html
 CSV report saved: huntcat_report.csv
 ```
 
-## 📁 Repository Structure
+## Repository Structure
 
 - HuntCat/
   - huntcat.go — Standalone version (for end users)
@@ -310,7 +310,7 @@ CSV report saved: huntcat_report.csv
 
 ---
 
-## ⚙️ **Configuration**
+## [^_^] **Configuration**
 
 Edit constants in `huntcat.go` (or `constants.go` in the modular version) to customize behavior:
 
