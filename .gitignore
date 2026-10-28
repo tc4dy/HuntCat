@@ -1,4 +1,3 @@
-# Binaries
 huntcat
 huntcat.exe
 huntcat-*
@@ -9,16 +8,13 @@ huntcat-*
 *.dylib
 *.test
 
-# Build artifacts
 dist/
 bin/
 tmp/
 
-# Reports
 huntcat_report.html
 huntcat_report.csv
 
-# Go specific
 *.out
 *.prof
 *.cover
@@ -26,7 +22,6 @@ coverage.html
 coverage.out
 *.work
 
-# Dependency directories (Go modules)
 vendor/
 
 # IDE
@@ -37,7 +32,6 @@ vendor/
 *~
 .DS_Store
 
-# OS generated files
 Thumbs.db
 ehthumbs.db
 Desktop.ini
@@ -45,15 +39,12 @@ Desktop.ini
 # Logs
 *.log
 
-# Environment files
 .env
 .env.local
 .env.*.local
 
-# Debug files
 __debug_bin
 __debug_bin.exe
 
-# Temporary files
 tmp/
 temp/
