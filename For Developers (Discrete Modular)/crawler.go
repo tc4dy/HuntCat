@@ -38,8 +38,7 @@ type Crawler struct {
 	sitemapURLs      []string
 	sitemapMutex     sync.Mutex
 	robotsTxtRaw     string
-	depth            map[string]int
-	depthMutex       sync.Mutex
+	robotsFound      bool
 	authCookie       string
 	authToken        string
 	customHeaders    map[string]string
@@ -109,7 +108,6 @@ func NewCrawler(startURL string, opts ...CrawlerOption) (*Crawler, error) {
 		contentCache:  make(map[string]string),
 		robotsRules:   make(map[string]bool),
 		sitemapURLs:   make([]string, 0),
-		depth:         make(map[string]int),
 		customHeaders: make(map[string]string),
 		lastPruneTime: time.Now(),
 	}
@@ -127,15 +125,11 @@ func NewCrawler(startURL string, opts ...CrawlerOption) (*Crawler, error) {
 type CrawlerOption func(*Crawler)
 
 func WithAuthCookie(cookie string) CrawlerOption {
-	return func(c *Crawler) {
-		c.authCookie = cookie
-	}
+	return func(c *Crawler) { c.authCookie = cookie }
 }
 
 func WithAuthToken(token string) CrawlerOption {
-	return func(c *Crawler) {
-		c.authToken = token
-	}
+	return func(c *Crawler) { c.authToken = token }
 }
 
 func WithCustomHeaders(headers map[string]string) CrawlerOption {
@@ -147,9 +141,7 @@ func WithCustomHeaders(headers map[string]string) CrawlerOption {
 }
 
 func WithHTTPClient(client HTTPClient) CrawlerOption {
-	return func(c *Crawler) {
-		c.client = client
-	}
+	return func(c *Crawler) { c.client = client }
 }
 
 func (c *Crawler) setRequestHeaders(req *http.Request) {
@@ -212,6 +204,7 @@ func (c *Crawler) fetchRobotsTxt() {
 
 	c.robotsMutex.Lock()
 	c.robotsTxtRaw = string(body)
+	c.robotsFound = true
 	c.robotsMutex.Unlock()
 
 	lines := strings.Split(string(body), "\n")
@@ -329,7 +322,16 @@ func (c *Crawler) isAllowedByRobots(urlPath string) bool {
 }
 
 func (c *Crawler) fetchSitemap() {
-	sitemapURL := c.baseURL.Scheme + "://" + c.baseURL.Host + "/sitemap.xml"
+	visited := make(map[string]bool)
+	rootURL := c.baseURL.Scheme + "://" + c.baseURL.Host + "/sitemap.xml"
+	c.fetchSitemapRecursive(rootURL, 0, visited)
+}
+
+func (c *Crawler) fetchSitemapRecursive(sitemapURL string, depth int, visited map[string]bool) {
+	if depth > 2 || visited[sitemapURL] {
+		return
+	}
+	visited[sitemapURL] = true
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -357,16 +359,14 @@ func (c *Crawler) fetchSitemap() {
 
 	var idx sitemapIndex
 	if err := xml.Unmarshal(body, &idx); err == nil && len(idx.Sitemaps) > 0 {
-		c.sitemapMutex.Lock()
 		for _, s := range idx.Sitemaps {
 			if s.Loc != "" {
 				resolved := resolveURL(sitemapURL, s.Loc)
 				if resolved != "" {
-					c.sitemapURLs = append(c.sitemapURLs, resolved)
+					c.fetchSitemapRecursive(resolved, depth+1, visited)
 				}
 			}
 		}
-		c.sitemapMutex.Unlock()
 		return
 	}
 
@@ -610,102 +610,101 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 	}
 
 	c.setRequestHeaders(req)
-
 	resp, err := c.client.Do(req)
-	if err != nil {
-		resp = nil
-	}
 
-	if resp != nil && err == nil {
-		contentLength := resp.ContentLength
+	if err != nil || resp == nil {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+
+		fallbackStart := time.Now()
+		ctx2, cancel2 := context.WithTimeout(context.Background(), requestTimeout)
+		defer cancel2()
+
+		req2, err2 := http.NewRequestWithContext(ctx2, "GET", urlStr, nil)
+		if err2 != nil {
+			message := "request build failed"
+			if err != nil {
+				message = err.Error()
+			} else {
+				message = err2.Error()
+			}
+			c.addResult(PageStatus{
+				URL:          urlStr,
+				StatusCode:   0,
+				ErrorMessage: message,
+				ResourceType: resourceType,
+				LoadTime:     time.Since(headStart),
+			})
+			logStatus(urlStr, 0, resourceType, message)
+			return
+		}
+
+		c.setRequestHeaders(req2)
+		resp2, err2 := c.client.Do(req2)
+		if err2 != nil {
+			c.addResult(PageStatus{
+				URL:          urlStr,
+				StatusCode:   0,
+				ErrorMessage: err2.Error(),
+				ResourceType: resourceType,
+				LoadTime:     time.Since(headStart),
+			})
+			logStatus(urlStr, 0, resourceType, err2.Error())
+			return
+		}
+		defer resp2.Body.Close()
+
+		contentLength := resp2.ContentLength
 		if contentLength < 0 {
 			contentLength = 0
 		}
-		loadTime := time.Since(headStart)
+		loadTime := time.Since(fallbackStart)
 		parsedURL, parseErr := url.Parse(urlStr)
 		isHTTPS := parseErr == nil && parsedURL != nil && parsedURL.Scheme == "https"
 		status := PageStatus{
 			URL:          urlStr,
-			StatusCode:   resp.StatusCode,
-			ContentType:  resp.Header.Get("Content-Type"),
+			StatusCode:   resp2.StatusCode,
+			ContentType:  resp2.Header.Get("Content-Type"),
 			Size:         contentLength,
 			ResourceType: resourceType,
 			IsHTTPS:      isHTTPS,
 			LoadTime:     loadTime,
 		}
-		resp.Body.Close()
 		c.addResult(status)
 		if resourceType == "image" {
-			logImageStatus(urlStr, resp.StatusCode, contentLength)
+			logImageStatus(urlStr, resp2.StatusCode, contentLength)
 		} else {
-			logStatus(urlStr, resp.StatusCode, resourceType, "")
+			logStatus(urlStr, resp2.StatusCode, resourceType, "")
 		}
 		return
 	}
 
-	if resp != nil {
-		resp.Body.Close()
-	}
-
-	fallbackStart := time.Now()
-	ctx2, cancel2 := context.WithTimeout(context.Background(), requestTimeout)
-	defer cancel2()
-
-	req2, err2 := http.NewRequestWithContext(ctx2, "GET", urlStr, nil)
-	if err2 != nil {
-		message := "request build failed"
-		if err != nil {
-			message = err.Error()
-		} else {
-			message = err2.Error()
-		}
-		c.addResult(PageStatus{
-			URL:          urlStr,
-			StatusCode:   0,
-			ErrorMessage: message,
-			ResourceType: resourceType,
-			LoadTime:     time.Since(headStart),
-		})
-		logStatus(urlStr, 0, resourceType, message)
-		return
-	}
-
-	c.setRequestHeaders(req2)
-	resp2, err2 := c.client.Do(req2)
-	if err2 != nil {
-		c.addResult(PageStatus{
-			URL:          urlStr,
-			StatusCode:   0,
-			ErrorMessage: err2.Error(),
-			ResourceType: resourceType,
-			LoadTime:     time.Since(headStart),
-		})
-		logStatus(urlStr, 0, resourceType, err2.Error())
-		return
-	}
-	defer resp2.Body.Close()
-
-	contentLength := resp2.ContentLength
+	contentLength := resp.ContentLength
 	if contentLength < 0 {
 		contentLength = 0
 	}
-	loadTime := time.Since(fallbackStart)
+	loadTime := time.Since(headStart)
 	parsedURL, parseErr := url.Parse(urlStr)
 	isHTTPS := parseErr == nil && parsedURL != nil && parsedURL.Scheme == "https"
+
 	status := PageStatus{
 		URL:          urlStr,
-		StatusCode:   resp2.StatusCode,
-		ContentType:  resp2.Header.Get("Content-Type"),
+		StatusCode:   resp.StatusCode,
+		ContentType:  resp.Header.Get("Content-Type"),
 		Size:         contentLength,
 		ResourceType: resourceType,
 		IsHTTPS:      isHTTPS,
 		LoadTime:     loadTime,
 	}
+
+	resp.Body.Close()
 	c.addResult(status)
+
 	if resourceType == "image" {
-		logImageStatus(urlStr, resp2.StatusCode, contentLength)
+		logImageStatus(urlStr, resp.StatusCode, contentLength)
 	} else {
-		logStatus(urlStr, resp2.StatusCode, resourceType, "")
+		logStatus(urlStr, resp.StatusCode, resourceType, "")
 	}
 }
 
@@ -715,10 +714,6 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 	if !c.markVisited(urlStr) {
 		return
 	}
-
-	c.depthMutex.Lock()
-	c.depth[urlStr] = depth
-	c.depthMutex.Unlock()
 
 	atomic.AddInt64(&c.scannedCount, 1)
 	if atomic.LoadInt64(&c.scannedCount)%gcInterval == 0 {
@@ -735,7 +730,7 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 
 		isDuplicate, originalURL := c.checkDuplicateContent(body, urlStr)
 		if isDuplicate {
-			status.ContentHash = originalURL
+			status.DuplicateOf = originalURL
 		}
 	}
 
@@ -769,15 +764,13 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 		fullURL := parsedLink.String()
 
 		if c.shouldCrawl(parsedLink) {
-			if !c.isVisited(fullURL) && depth < maxCrawlDepth {
+			if depth < maxCrawlDepth {
 				c.wg.Add(1)
 				go c.crawlPage(fullURL, depth+1)
 			}
 		} else if parsedLink.Host != c.domain {
-			if !c.isVisited(fullURL) {
-				c.wg.Add(1)
-				go c.checkResource(fullURL, "external")
-			}
+			c.wg.Add(1)
+			go c.checkResource(fullURL, "external")
 		}
 	}
 
@@ -795,10 +788,8 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 		parsedImg.Fragment = ""
 		fullURL := parsedImg.String()
 
-		if !c.isVisited(fullURL) {
-			c.wg.Add(1)
-			go c.checkResource(fullURL, "image")
-		}
+		c.wg.Add(1)
+		go c.checkResource(fullURL, "image")
 	}
 }
 
@@ -807,6 +798,24 @@ func (c *Crawler) Start() *AuditResult {
 
 	c.wg.Add(1)
 	go c.crawlPage(startURL, 0)
+
+	c.sitemapMutex.Lock()
+	sitemapURLs := append([]string(nil), c.sitemapURLs...)
+	c.sitemapMutex.Unlock()
+
+	for _, raw := range sitemapURLs {
+		parsed, err := url.Parse(raw)
+		if err != nil {
+			continue
+		}
+		if !c.shouldCrawl(parsed) {
+			continue
+		}
+		parsed.Fragment = ""
+		fullURL := parsed.String()
+		c.wg.Add(1)
+		go c.crawlPage(fullURL, 1)
+	}
 
 	c.wg.Wait()
 
@@ -832,6 +841,7 @@ func (c *Crawler) analyzeResults() *AuditResult {
 		MissingMetaTags:  make([]PageStatus, 0),
 		SitemapURLs:      c.sitemapURLs,
 		RobotsAllowed:    len(c.robotsRules) > 0,
+		RobotsFound:      c.robotsFound,
 		RobotsTxtContent: c.robotsTxtRaw,
 	}
 
@@ -885,7 +895,7 @@ func (c *Crawler) analyzeResults() *AuditResult {
 			}
 		}
 
-		if result.ContentHash != "" {
+		if result.DuplicateOf != "" {
 			audit.DuplicateContent = append(audit.DuplicateContent, result)
 			seoIssues++
 		}
