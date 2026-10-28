@@ -18,7 +18,7 @@ type PageStatus struct {
 	IsHTTPS        bool
 	HTTPVersion    string
 	HasRobotsMeta  bool
-	ContentHash    string
+	DuplicateOf    string
 	LoadTime       time.Duration
 	HasSitemap     bool
 	MetaRobots     string
@@ -45,5 +45,6 @@ type AuditResult struct {
 	SecurityScore    float64
 	SitemapURLs      []string
 	RobotsAllowed    bool
+	RobotsFound      bool
 	RobotsTxtContent string
 }
