@@ -1,5 +1,3 @@
-//go:build ignore
-
 package main
 
 import (
@@ -97,7 +95,7 @@ type PageStatus struct {
 	IsHTTPS        bool
 	HTTPVersion    string
 	HasRobotsMeta  bool
-	ContentHash    string
+	DuplicateOf    string
 	LoadTime       time.Duration
 	HasSitemap     bool
 	MetaRobots     string
@@ -124,6 +122,7 @@ type AuditResult struct {
 	SecurityScore    float64
 	SitemapURLs      []string
 	RobotsAllowed    bool
+	RobotsFound      bool
 	RobotsTxtContent string
 }
 
@@ -150,8 +149,7 @@ type Crawler struct {
 	sitemapURLs      []string
 	sitemapMutex     sync.Mutex
 	robotsTxtRaw     string
-	depth            map[string]int
-	depthMutex       sync.Mutex
+	robotsFound      bool
 	authCookie       string
 	authToken        string
 	customHeaders    map[string]string
@@ -175,15 +173,11 @@ type urlset struct {
 type CrawlerOption func(*Crawler)
 
 func WithAuthCookie(cookie string) CrawlerOption {
-	return func(c *Crawler) {
-		c.authCookie = cookie
-	}
+	return func(c *Crawler) { c.authCookie = cookie }
 }
 
 func WithAuthToken(token string) CrawlerOption {
-	return func(c *Crawler) {
-		c.authToken = token
-	}
+	return func(c *Crawler) { c.authToken = token }
 }
 
 func WithCustomHeaders(headers map[string]string) CrawlerOption {
@@ -195,9 +189,7 @@ func WithCustomHeaders(headers map[string]string) CrawlerOption {
 }
 
 func WithHTTPClient(client HTTPClient) CrawlerOption {
-	return func(c *Crawler) {
-		c.client = client
-	}
+	return func(c *Crawler) { c.client = client }
 }
 
 func NewCrawler(startURL string, opts ...CrawlerOption) (*Crawler, error) {
@@ -249,7 +241,6 @@ func NewCrawler(startURL string, opts ...CrawlerOption) (*Crawler, error) {
 		contentCache:  make(map[string]string),
 		robotsRules:   make(map[string]bool),
 		sitemapURLs:   make([]string, 0),
-		depth:         make(map[string]int),
 		customHeaders: make(map[string]string),
 		lastPruneTime: time.Now(),
 	}
@@ -324,6 +315,7 @@ func (c *Crawler) fetchRobotsTxt() {
 
 	c.robotsMutex.Lock()
 	c.robotsTxtRaw = string(body)
+	c.robotsFound = true
 	c.robotsMutex.Unlock()
 
 	lines := strings.Split(string(body), "\n")
@@ -441,7 +433,16 @@ func (c *Crawler) isAllowedByRobots(urlPath string) bool {
 }
 
 func (c *Crawler) fetchSitemap() {
-	sitemapURL := c.baseURL.Scheme + "://" + c.baseURL.Host + "/sitemap.xml"
+	visited := make(map[string]bool)
+	rootURL := c.baseURL.Scheme + "://" + c.baseURL.Host + "/sitemap.xml"
+	c.fetchSitemapRecursive(rootURL, 0, visited)
+}
+
+func (c *Crawler) fetchSitemapRecursive(sitemapURL string, depth int, visited map[string]bool) {
+	if depth > 2 || visited[sitemapURL] {
+		return
+	}
+	visited[sitemapURL] = true
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -469,16 +470,14 @@ func (c *Crawler) fetchSitemap() {
 
 	var idx sitemapIndex
 	if err := xml.Unmarshal(body, &idx); err == nil && len(idx.Sitemaps) > 0 {
-		c.sitemapMutex.Lock()
 		for _, s := range idx.Sitemaps {
 			if s.Loc != "" {
 				resolved := resolveURL(sitemapURL, s.Loc)
 				if resolved != "" {
-					c.sitemapURLs = append(c.sitemapURLs, resolved)
+					c.fetchSitemapRecursive(resolved, depth+1, visited)
 				}
 			}
 		}
-		c.sitemapMutex.Unlock()
 		return
 	}
 
@@ -722,7 +721,6 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 	}
 
 	c.setRequestHeaders(req)
-
 	resp, err := c.client.Do(req)
 
 	if err != nil || resp == nil {
@@ -828,10 +826,6 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 		return
 	}
 
-	c.depthMutex.Lock()
-	c.depth[urlStr] = depth
-	c.depthMutex.Unlock()
-
 	atomic.AddInt64(&c.scannedCount, 1)
 	if atomic.LoadInt64(&c.scannedCount)%gcInterval == 0 {
 		c.maybePruneMemory()
@@ -847,7 +841,7 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 
 		isDuplicate, originalURL := c.checkDuplicateContent(body, urlStr)
 		if isDuplicate {
-			status.ContentHash = originalURL
+			status.DuplicateOf = originalURL
 		}
 	}
 
@@ -881,15 +875,13 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 		fullURL := parsedLink.String()
 
 		if c.shouldCrawl(parsedLink) {
-			if !c.isVisited(fullURL) && depth < maxCrawlDepth {
+			if depth < maxCrawlDepth {
 				c.wg.Add(1)
 				go c.crawlPage(fullURL, depth+1)
 			}
 		} else if parsedLink.Host != c.domain {
-			if !c.isVisited(fullURL) {
-				c.wg.Add(1)
-				go c.checkResource(fullURL, "external")
-			}
+			c.wg.Add(1)
+			go c.checkResource(fullURL, "external")
 		}
 	}
 
@@ -907,10 +899,8 @@ func (c *Crawler) crawlPage(urlStr string, depth int) {
 		parsedImg.Fragment = ""
 		fullURL := parsedImg.String()
 
-		if !c.isVisited(fullURL) {
-			c.wg.Add(1)
-			go c.checkResource(fullURL, "image")
-		}
+		c.wg.Add(1)
+		go c.checkResource(fullURL, "image")
 	}
 }
 
@@ -919,6 +909,24 @@ func (c *Crawler) Start() *AuditResult {
 
 	c.wg.Add(1)
 	go c.crawlPage(startURL, 0)
+
+	c.sitemapMutex.Lock()
+	sitemapURLs := append([]string(nil), c.sitemapURLs...)
+	c.sitemapMutex.Unlock()
+
+	for _, raw := range sitemapURLs {
+		parsed, err := url.Parse(raw)
+		if err != nil {
+			continue
+		}
+		if !c.shouldCrawl(parsed) {
+			continue
+		}
+		parsed.Fragment = ""
+		fullURL := parsed.String()
+		c.wg.Add(1)
+		go c.crawlPage(fullURL, 1)
+	}
 
 	c.wg.Wait()
 
@@ -944,6 +952,7 @@ func (c *Crawler) analyzeResults() *AuditResult {
 		MissingMetaTags:  make([]PageStatus, 0),
 		SitemapURLs:      c.sitemapURLs,
 		RobotsAllowed:    len(c.robotsRules) > 0,
+		RobotsFound:      c.robotsFound,
 		RobotsTxtContent: c.robotsTxtRaw,
 	}
 
@@ -997,7 +1006,7 @@ func (c *Crawler) analyzeResults() *AuditResult {
 			}
 		}
 
-		if result.ContentHash != "" {
+		if result.DuplicateOf != "" {
 			audit.DuplicateContent = append(audit.DuplicateContent, result)
 			seoIssues++
 		}
@@ -1456,11 +1465,7 @@ func displaySummaryReport(audit *AuditResult) {
 	} else {
 		fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s[+] Excellent%s\n", len(audit.CriticalAssets), colorGreen, colorReset)
 	}
-
-	if len(audit.WarningAssets) > 0 {
-		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[!] Optimize%s\n", len(audit.WarningAssets), colorOrange, colorReset)
-	} else {
-		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[+] Good%s\n", len(audit.WarningAssets), colorGreen, colorReset)
+[+] Good%s\n", len(audit.WarningAssets), colorGreen, colorReset)
 	}
 
 	if len(audit.AdviceAssets) > 0 {
@@ -1493,10 +1498,10 @@ func displaySummaryReport(audit *AuditResult) {
 		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[!] Not Found%s\n", len(audit.SitemapURLs), colorYellow, colorReset)
 	}
 
-	if audit.RobotsAllowed {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[+] Compliant%s\n", colorGreen, colorReset)
+	if audit.RobotsFound {
+		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[+] Found%s\n", colorGreen, colorReset)
 	} else {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[!] Issues%s\n", colorYellow, colorReset)
+		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[!] Not Found%s\n", colorYellow, colorReset)
 	}
 
 	fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
@@ -1830,9 +1835,9 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
 			statusClass = "status-critical"
 			message = fmt.Sprintf("Critical: %.2f MB", float64(issue.Size)/(1024*1024))
 			priority = "Critical"
-		} else if issue.ContentHash != "" {
+		} else if issue.DuplicateOf != "" {
 			statusClass = "status-warning"
-			message = "Duplicate of: " + html.EscapeString(issue.ContentHash)
+			message = "Duplicate of: " + html.EscapeString(issue.DuplicateOf)
 			priority = "Medium"
 		} else if !issue.IsHTTPS {
 			statusClass = "status-warning"
@@ -1864,10 +1869,10 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
             Target: ` + html.EscapeString(targetURL) + `<br>
             Sitemap URLs Found: ` + fmt.Sprintf("%d", len(audit.SitemapURLs)) + `<br>
             Robots.txt: ` + func() string {
-		if audit.RobotsAllowed {
-			return "Compliant"
+		if audit.RobotsFound {
+			return "Found"
 		}
-		return "Issues Detected"
+		return "Not Found"
 	}() + `<br>
             "Sniffing every corner of the web, one paw at a time."
         </div>
@@ -1924,7 +1929,7 @@ func exportCSVReport(audit *AuditResult) error {
 			issue = "Server Error"
 		} else if page.ResourceType == "image" && page.Size >= criticalImageThreshold {
 			issue = "Critical Image Size"
-		} else if page.ContentHash != "" {
+		} else if page.DuplicateOf != "" {
 			issue = "Duplicate Content"
 		} else if !page.IsHTTPS {
 			issue = "Not HTTPS"
@@ -1954,16 +1959,6 @@ func exportCSVReport(audit *AuditResult) error {
 
 	writer.Flush()
 	return writer.Error()
-}
-
-func printUsage() {
-	fmt.Println(colorRed + "Usage: huntcat <website-url> [options]" + colorReset)
-	fmt.Println(colorYellow + "Example: huntcat https://example.com" + colorReset)
-	fmt.Println(colorYellow + "Options:" + colorReset)
-	fmt.Println(colorYellow + "  --cookie=<value>       Set authentication cookie" + colorReset)
-	fmt.Println(colorYellow + "  --token=<value>        Set Bearer token" + colorReset)
-	fmt.Println(colorYellow + "  --header=<k:v>         Add custom header (repeatable)" + colorReset)
-	fmt.Println(colorYellow + "  -h, --help             Show this help message" + colorReset)
 }
 
 func main() {
@@ -2067,4 +2062,14 @@ func main() {
 	fmt.Println()
 	fmt.Printf("%s[+] HuntCat hunt completed! Thank you for using HuntCat.%s\n", colorBoldGreen, colorReset)
 	fmt.Println()
+}
+
+func printUsage() {
+	fmt.Println(colorRed + "Usage: huntcat <website-url> [options]" + colorReset)
+	fmt.Println(colorYellow + "Example: huntcat https://example.com" + colorReset)
+	fmt.Println(colorYellow + "Options:" + colorReset)
+	fmt.Println(colorYellow + "  --cookie=<value>       Set authentication cookie" + colorReset)
+	fmt.Println(colorYellow + "  --token=<value>        Set Bearer token" + colorReset)
+	fmt.Println(colorYellow + "  --header=<k:v>         Add custom header (repeatable)" + colorReset)
+	fmt.Println(colorYellow + "  -h, --help             Show this help message" + colorReset)
 }
