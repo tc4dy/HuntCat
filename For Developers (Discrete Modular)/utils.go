@@ -63,9 +63,9 @@ func logStatus(urlStr string, statusCode int, resourceType, errorMsg string) {
 	}
 
 	if errorMsg != "" {
-		fmt.Printf("%s%s %3d %s (%s)%s\n", color, symbol, statusCode, displayURL, errorMsg, colorReset)
+		fmt.Printf("%s%s %3d %s [%s] (%s)%s\n", color, symbol, statusCode, displayURL, resourceType, errorMsg, colorReset)
 	} else {
-		fmt.Printf("%s%s %3d %s%s\n", color, symbol, statusCode, displayURL, colorReset)
+		fmt.Printf("%s%s %3d %s [%s]%s\n", color, symbol, statusCode, displayURL, resourceType, colorReset)
 	}
 }
 
@@ -108,14 +108,15 @@ func logImageStatus(urlStr string, statusCode int, size int64) {
 }
 
 func clearScreen() {
+	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd := exec.Command("cmd", "/c", "cls")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
+		cmd = exec.Command("cmd", "/c", "cls")
 	default:
-		cmd := exec.Command("clear")
-		cmd.Stdout = os.Stdout
-		cmd.Run()
+		cmd = exec.Command("clear")
+	}
+	cmd.Stdout = os.Stdout
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "clear screen failed: %v\n", err)
 	}
 }
