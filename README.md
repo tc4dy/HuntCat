@@ -4,13 +4,13 @@
 **Enterprise-Grade Web Audit & SEO Crawler**
 
 ## **Warning!**
-**(With Modular & Standalone Mods for developers and users.)**
-**huntcat.go** is intended for regular users. If you're a developer and want to explore the code more thoroughly, you can access the main file structure **(main.go, crawler.go, constants.go, colors.go, page_status.go, http_client.go, parsers.go, reports.go, utils.go, go.mod)** in the **"For Developers (Discrete Modular)"** folder.
+**(With Modular & Standalone Modes for developers and users.)**
+**huntcat.go** is intended for regular users. If you're a developer and want to explore the code more thoroughly, you can access the main file structure in the **"For Developers (Discrete Modular)"** folder.
 
-[![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](https://github.com)
-[![Made with Go](https://img.shields.io/badge/Made%20with-Go-1E90BE?style=for-the-badge&logo=go)](https://go.dev/)
+[![CI](https://github.com/tc4dy/HuntCat/actions/workflows/ci.yml/badge.svg?style=for-the-badge)](https://github.com/tc4dy/HuntCat/actions/workflows/ci.yml)
 [![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
 
 *"Leave your cats in the area and enjoy!"*
@@ -29,7 +29,7 @@
 - [+] **Beautiful Reports**: Professional HTML + CSV exports
 - [+] **Security-First**: TLS 1.2+, HTTP/2 support, HTTPS validation
 - [+] **SEO Intelligence**: Meta tags, canonicals, structured data detection
-- [+] **Polite Crawling**: robots.txt compliance, rate limiting
+- [+] **Polite Crawling**: RFC 9309 compliant `robots.txt` handling, rate limiting
 - [+] **Smart Detection**: Duplicate content via SHA-256 hashing
 - [+] **4D Scoring System**: Health, SEO, Performance, Security
 
@@ -39,39 +39,42 @@
 
 ### [+] **Advanced Crawling**
 - Recursive link discovery with intelligent depth control
-- Concurrent processing (up to 100 workers)
-- Automatic sitemap.xml parsing
-- External link validation (HEAD requests)
+- Concurrent processing (up to 50 workers by default)
+- Sitemap index parsing (recursive)
+- External link validation (HEAD with GET fallback)
+- `<base href>` resolution for relative links
 - Image asset optimization analysis
 
 ### [+] **Health Monitoring**
 - **404 Detection**: Broken link identification
 - **5xx Errors**: Server-side issue tracking
-- **Redirect Chains**: 301/302 loop detection
+- **Redirect Chains**: Accurate 301/302 counting via Context
 - **Asset Analysis**: Image size optimization (700KB/1MB/2MB thresholds)
 - **Load Time Tracking**: Per-resource performance metrics
 
 ### [+] **SEO Audit Engine**
 - Title tag validation (optimal: 50-60 chars)
-- Meta description analysis (optimal: 120-160 chars)
+- Meta description analysis (optimal: up to 160 chars)
 - H1 tag counting (best practice: exactly 1)
 - Canonical URL detection
 - Open Graph meta tags extraction
 - Structured Data (JSON-LD) detection
 - Meta robots tag inspection
 
-### [+] **Security Checks**
+### [+] **Security & Reliability Checks**
 - HTTPS enforcement validation
 - HTTP/2 protocol detection
 - TLS version verification (>= 1.2)
 - Non-secure page flagging
+- Transparent gzip decompression (No manual `Accept-Encoding` bugs)
+- Memory pruning (Prevents leaks on large crawls)
 
 ### [+] **Intelligent Scoring**
 ```
-Health Score      = (100 - error_rate)
-SEO Score         = Meta tag compliance + structural quality
+Health Score = (100 - error_rate)
+SEO Score = Meta tag compliance + structural quality (HTML pages only)
 Performance Score = Asset optimization + load times
-Security Score    = HTTPS coverage + TLS compliance
+Security Score = HTTPS coverage + TLS compliance
 ```
 
 ---
@@ -79,23 +82,42 @@ Security Score    = HTTPS coverage + TLS compliance
 ## [<>] **Installation**
 
 ### **Prerequisites**
-- [Go 1.22+](https://go.dev/dl/) installed
+- [Go 1.21+](https://go.dev/dl/) installed
 - Terminal/Command Prompt access
 
-### **Quick Install**
+### **Quick Install (Standalone for Users)**
 ```bash
 # Clone the repository
 git clone https://github.com/tc4dy/HuntCat.git
 cd HuntCat
 
-# Initialize Go module
+# Navigate to the standalone folder
+cd "Standalone (Single File for Users)"
+
+# Download dependencies
 go mod download
 
 # Run directly
 go run huntcat.go https://example.com
 
-# Or build binary
-go build -o huntcat huntcat.go
+# Or build a binary
+go build -ldflags="-s -w" -o huntcat huntcat.go
+./huntcat https://example.com
+```
+
+### For Developers (Discrete Modular)
+```bash
+# From the root directory
+cd "For Developers (Discrete Modular)"
+
+# Download dependencies
+go mod download
+
+# Run using all files
+go run *.go https://example.com
+
+# Build binary
+go build -ldflags="-s -w" -o huntcat .
 ./huntcat https://example.com
 ```
 
@@ -109,8 +131,6 @@ curl -sSL https://raw.githubusercontent.com/tc4dy/HuntCat/main/huntcat.go -o hun
 ## [<\>] **Usage**
 
 HuntCat ships in two forms: a **Standalone** single file for end users, and a **Discrete Modular** structure for developers. Both are functionally identical — the same Go code, just organized differently.
-
----
 
 ### **Standalone (End Users)**
 
@@ -148,16 +168,7 @@ The `For Developers (Discrete Modular)/` folder contains the same application sp
 
 ```bash
 cd "For Developers (Discrete Modular)"
-
-# Download dependencies
-go mod download
-
-# Run using all files
 go run *.go https://example.com
-
-# Build binary
-go build -ldflags="-s -w" -o huntcat .
-./huntcat https://example.com
 ```
 
 **Authentication & Custom Headers work identically:**
