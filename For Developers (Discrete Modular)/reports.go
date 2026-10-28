@@ -114,10 +114,10 @@ func displaySummaryReport(audit *AuditResult) {
 		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[!] Not Found%s\n", len(audit.SitemapURLs), colorYellow, colorReset)
 	}
 
-	if audit.RobotsAllowed {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[+] Compliant%s\n", colorGreen, colorReset)
+	if audit.RobotsFound {
+		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[+] Found%s\n", colorGreen, colorReset)
 	} else {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[!] Issues%s\n", colorYellow, colorReset)
+		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[!] Not Found%s\n", colorYellow, colorReset)
 	}
 
 	fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
@@ -451,9 +451,9 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
 			statusClass = "status-critical"
 			message = fmt.Sprintf("Critical: %.2f MB", float64(issue.Size)/(1024*1024))
 			priority = "Critical"
-		} else if issue.ContentHash != "" {
+		} else if issue.DuplicateOf != "" {
 			statusClass = "status-warning"
-			message = "Duplicate of: " + html.EscapeString(issue.ContentHash)
+			message = "Duplicate of: " + html.EscapeString(issue.DuplicateOf)
 			priority = "Medium"
 		} else if !issue.IsHTTPS {
 			statusClass = "status-warning"
@@ -485,10 +485,10 @@ func exportHTMLReport(audit *AuditResult, targetURL string) error {
             Target: ` + html.EscapeString(targetURL) + `<br>
             Sitemap URLs Found: ` + fmt.Sprintf("%d", len(audit.SitemapURLs)) + `<br>
             Robots.txt: ` + func() string {
-		if audit.RobotsAllowed {
-			return "Compliant"
+		if audit.RobotsFound {
+			return "Found"
 		}
-		return "Issues Detected"
+		return "Not Found"
 	}() + `<br>
             "Sniffing every corner of the web, one paw at a time."
         </div>
@@ -545,7 +545,7 @@ func exportCSVReport(audit *AuditResult) error {
 			issue = "Server Error"
 		} else if page.ResourceType == "image" && page.Size >= criticalImageThreshold {
 			issue = "Critical Image Size"
-		} else if page.ContentHash != "" {
+		} else if page.DuplicateOf != "" {
 			issue = "Duplicate Content"
 		} else if !page.IsHTTPS {
 			issue = "Not HTTPS"
