@@ -185,7 +185,7 @@ func (c *Crawler) fetchRobotsTxt() {
 		c.robotsMutex.Unlock()
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		c.robotsMutex.Lock()
@@ -346,7 +346,7 @@ func (c *Crawler) fetchSitemapRecursive(sitemapURL string, depth int, visited ma
 	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != 200 {
 		return
@@ -395,12 +395,6 @@ func (c *Crawler) markVisited(urlStr string) bool {
 	return true
 }
 
-func (c *Crawler) isVisited(urlStr string) bool {
-	c.visitedMutex.RLock()
-	defer c.visitedMutex.RUnlock()
-	return c.visited[urlStr] || c.visitedPrev[urlStr]
-}
-
 func (c *Crawler) addResult(status PageStatus) {
 	c.resultsMutex.Lock()
 	defer c.resultsMutex.Unlock()
@@ -446,14 +440,9 @@ func (c *Crawler) checkDuplicateContent(body string, currentURL string) (bool, s
 }
 
 func (c *Crawler) shouldCrawl(targetURL *url.URL) bool {
-	normalizedHost := strings.ToLower(targetURL.Host)
-	if strings.HasPrefix(normalizedHost, "www.") {
-		normalizedHost = normalizedHost[4:]
-	}
-	baseHost := strings.ToLower(c.domain)
-	if strings.HasPrefix(baseHost, "www.") {
-		baseHost = baseHost[4:]
-	}
+	normalizedHost := strings.TrimPrefix(strings.ToLower(targetURL.Host), "www.")
+	baseHost := strings.TrimPrefix(strings.ToLower(c.domain), "www.")
+
 	if normalizedHost != baseHost {
 		return false
 	}
@@ -540,7 +529,7 @@ func (c *Crawler) fetchPage(urlStr string) (*PageStatus, string, error) {
 			LoadTime:     time.Since(startTime),
 		}, "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -614,7 +603,7 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 
 	if err != nil || resp == nil {
 		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 		}
 
 		fallbackStart := time.Now()
@@ -623,20 +612,25 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 
 		req2, err2 := http.NewRequestWithContext(ctx2, "GET", urlStr, nil)
 		if err2 != nil {
-			message := "request build failed"
 			if err != nil {
-				message = err.Error()
+				c.addResult(PageStatus{
+					URL:          urlStr,
+					StatusCode:   0,
+					ErrorMessage: err.Error(),
+					ResourceType: resourceType,
+					LoadTime:     time.Since(headStart),
+				})
+				logStatus(urlStr, 0, resourceType, err.Error())
 			} else {
-				message = err2.Error()
+				c.addResult(PageStatus{
+					URL:          urlStr,
+					StatusCode:   0,
+					ErrorMessage: err2.Error(),
+					ResourceType: resourceType,
+					LoadTime:     time.Since(headStart),
+				})
+				logStatus(urlStr, 0, resourceType, err2.Error())
 			}
-			c.addResult(PageStatus{
-				URL:          urlStr,
-				StatusCode:   0,
-				ErrorMessage: message,
-				ResourceType: resourceType,
-				LoadTime:     time.Since(headStart),
-			})
-			logStatus(urlStr, 0, resourceType, message)
 			return
 		}
 
@@ -653,7 +647,7 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 			logStatus(urlStr, 0, resourceType, err2.Error())
 			return
 		}
-		defer resp2.Body.Close()
+		defer func() { _ = resp2.Body.Close() }()
 
 		contentLength := resp2.ContentLength
 		if contentLength < 0 {
@@ -698,7 +692,7 @@ func (c *Crawler) checkResource(urlStr string, resourceType string) {
 		LoadTime:     loadTime,
 	}
 
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	c.addResult(status)
 
 	if resourceType == "image" {
