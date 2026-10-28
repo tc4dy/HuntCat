@@ -6,6 +6,10 @@ import (
 	htmlparser "golang.org/x/net/html"
 )
 
+var contentSkipTags = map[string]bool{
+	"nav": true, "header": true, "footer": true, "script": true, "style": true,
+}
+
 func extractMainContent(body string) string {
 	doc, err := htmlparser.Parse(strings.NewReader(body))
 	if err != nil {
@@ -14,17 +18,15 @@ func extractMainContent(body string) string {
 	var content strings.Builder
 	var traverse func(*htmlparser.Node)
 	traverse = func(n *htmlparser.Node) {
-		if n.Type == htmlparser.ElementNode {
-			skip := []string{"nav", "header", "footer", "script", "style"}
-			for _, tag := range skip {
-				if n.Data == tag {
-					return
-				}
-			}
+		if n.Type == htmlparser.ElementNode && contentSkipTags[n.Data] {
+			return
 		}
 		if n.Type == htmlparser.TextNode {
 			text := strings.TrimSpace(n.Data)
 			if text != "" {
+				if content.Len() > 0 {
+					content.WriteByte(' ')
+				}
 				content.WriteString(text)
 			}
 		}
@@ -36,9 +38,35 @@ func extractMainContent(body string) string {
 	return content.String()
 }
 
+func findBaseHref(doc *htmlparser.Node) string {
+	var found string
+	var walk func(*htmlparser.Node)
+	walk = func(n *htmlparser.Node) {
+		if found != "" {
+			return
+		}
+		if n.Type == htmlparser.ElementNode && n.Data == "base" {
+			for _, attr := range n.Attr {
+				if strings.EqualFold(attr.Key, "href") && attr.Val != "" {
+					found = attr.Val
+					return
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(doc)
+	return found
+}
+
 func (c *Crawler) analyzeSEO(status *PageStatus, body string) {
 	if status == nil {
 		return
+	}
+	if status.OGTags == nil {
+		status.OGTags = make(map[string]string)
 	}
 	doc, err := htmlparser.Parse(strings.NewReader(body))
 	if err != nil {
@@ -72,27 +100,34 @@ func (c *Crawler) analyzeSEO(status *PageStatus, body string) {
 			case "link":
 				var rel, href string
 				for _, attr := range n.Attr {
-					if attr.Key == "rel" {
+					if strings.EqualFold(attr.Key, "rel") {
 						rel = attr.Val
 					}
-					if attr.Key == "href" {
+					if strings.EqualFold(attr.Key, "href") {
 						href = attr.Val
 					}
 				}
-				if rel == "canonical" && href != "" {
+				hasCanonical := false
+				for _, token := range strings.Fields(strings.ToLower(rel)) {
+					if token == "canonical" {
+						hasCanonical = true
+						break
+					}
+				}
+				if hasCanonical && href != "" {
 					status.HasCanonical = true
 					status.CanonicalURL = href
 				}
 			case "meta":
 				var name, content, property string
 				for _, attr := range n.Attr {
-					if attr.Key == "name" {
-						name = attr.Val
+					if strings.EqualFold(attr.Key, "name") {
+						name = strings.ToLower(attr.Val)
 					}
-					if attr.Key == "property" {
-						property = attr.Val
+					if strings.EqualFold(attr.Key, "property") {
+						property = strings.ToLower(attr.Val)
 					}
-					if attr.Key == "content" {
+					if strings.EqualFold(attr.Key, "content") {
 						content = attr.Val
 					}
 				}
@@ -109,7 +144,8 @@ func (c *Crawler) analyzeSEO(status *PageStatus, body string) {
 				}
 			case "script":
 				for _, attr := range n.Attr {
-					if attr.Key == "type" && strings.Contains(attr.Val, "application/ld+json") {
+					if strings.EqualFold(attr.Key, "type") &&
+						strings.Contains(strings.ToLower(attr.Val), "application/ld+json") {
 						status.StructuredData = true
 					}
 				}
@@ -131,6 +167,13 @@ func extractPageAssets(body, baseURL string) ([]string, []string) {
 		return nil, nil
 	}
 
+	effectiveBase := baseURL
+	if baseHref := findBaseHref(doc); baseHref != "" {
+		if resolved := resolveURL(baseURL, baseHref); resolved != "" {
+			effectiveBase = resolved
+		}
+	}
+
 	links := make([]string, 0)
 	images := make([]string, 0)
 
@@ -139,13 +182,13 @@ func extractPageAssets(body, baseURL string) ([]string, []string) {
 		if n.Type == htmlparser.ElementNode {
 			if n.Data == "a" {
 				for _, attr := range n.Attr {
-					if attr.Key == "href" {
+					if strings.EqualFold(attr.Key, "href") {
 						link := attr.Val
 						if link != "" && !strings.HasPrefix(link, "#") &&
 							!strings.HasPrefix(link, "javascript:") &&
 							!strings.HasPrefix(link, "mailto:") &&
 							!strings.HasPrefix(link, "tel:") {
-							absURL := resolveURL(baseURL, link)
+							absURL := resolveURL(effectiveBase, link)
 							if absURL != "" {
 								links = append(links, absURL)
 							}
@@ -154,10 +197,10 @@ func extractPageAssets(body, baseURL string) ([]string, []string) {
 				}
 			} else if n.Data == "img" {
 				for _, attr := range n.Attr {
-					if attr.Key == "src" {
+					if strings.EqualFold(attr.Key, "src") {
 						img := attr.Val
 						if img != "" && !strings.HasPrefix(img, "data:") {
-							absURL := resolveURL(baseURL, img)
+							absURL := resolveURL(effectiveBase, img)
 							if absURL != "" {
 								images = append(images, absURL)
 							}
