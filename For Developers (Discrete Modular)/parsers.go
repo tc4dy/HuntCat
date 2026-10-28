@@ -180,7 +180,8 @@ func extractPageAssets(body, baseURL string) ([]string, []string) {
 	var traverse func(*htmlparser.Node)
 	traverse = func(n *htmlparser.Node) {
 		if n.Type == htmlparser.ElementNode {
-			if n.Data == "a" {
+			switch n.Data {
+			case "a":
 				for _, attr := range n.Attr {
 					if strings.EqualFold(attr.Key, "href") {
 						link := attr.Val
@@ -195,7 +196,7 @@ func extractPageAssets(body, baseURL string) ([]string, []string) {
 						}
 					}
 				}
-			} else if n.Data == "img" {
+			case "img":
 				for _, attr := range n.Attr {
 					if strings.EqualFold(attr.Key, "src") {
 						img := attr.Val
