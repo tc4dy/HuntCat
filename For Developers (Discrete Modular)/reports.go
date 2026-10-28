@@ -42,9 +42,9 @@ func displayASCIIBanner() {
 
 func displaySummaryReport(audit *AuditResult) {
 	fmt.Println()
-	fmt.Println(colorBoldCyan + "═══════════════════════════════════════════════════════════════════════════════" + colorReset)
-	fmt.Println(colorBoldCyan + "                            HUNTCAT AUDIT REPORT                               " + colorReset)
-	fmt.Println(colorBoldCyan + "═══════════════════════════════════════════════════════════════════════════════" + colorReset)
+	fmt.Println(colorBoldCyan + "╔═══════════════════════════════════════════════════════════════════════════════╗" + colorReset)
+	fmt.Println(colorBoldCyan + "║                            HUNTCAT AUDIT REPORT                               ║" + colorReset)
+	fmt.Println(colorBoldCyan + "╚═══════════════════════════════════════════════════════════════════════════════╝" + colorReset)
 	fmt.Println()
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
@@ -532,9 +532,10 @@ func exportCSVReport(audit *AuditResult) error {
 	defer file.Close()
 
 	writer := csv.NewWriter(file)
-	defer writer.Flush()
 
-	writer.Write([]string{"URL", "Type", "Status Code", "Size (bytes)", "HTTPS", "HTTP Version", "Title", "Description", "H1 Count", "Has Canonical", "Load Time (ms)", "Issue"})
+	if err := writer.Write([]string{"URL", "Type", "Status Code", "Size (bytes)", "HTTPS", "HTTP Version", "Title", "Description", "H1 Count", "Has Canonical", "Load Time (ms)", "Issue"}); err != nil {
+		return err
+	}
 
 	for _, page := range audit.Pages {
 		issue := "OK"
@@ -554,7 +555,7 @@ func exportCSVReport(audit *AuditResult) error {
 			issue = "Missing Description"
 		}
 
-		writer.Write([]string{
+		if err := writer.Write([]string{
 			page.URL,
 			page.ResourceType,
 			fmt.Sprintf("%d", page.StatusCode),
@@ -567,8 +568,11 @@ func exportCSVReport(audit *AuditResult) error {
 			fmt.Sprintf("%t", page.HasCanonical),
 			fmt.Sprintf("%d", page.LoadTime.Milliseconds()),
 			issue,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	writer.Flush()
+	return writer.Error()
 }
