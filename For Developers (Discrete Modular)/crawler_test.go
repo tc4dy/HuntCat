@@ -3,6 +3,7 @@ package main
 import (
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestMatchRobotsRulePrefix(t *testing.T) {
@@ -47,8 +48,20 @@ func TestShouldCrawlRejectsExcludedExtension(t *testing.T) {
 func TestAnalyzeResultsScoresUseCorrectDenominator(t *testing.T) {
 	c := &Crawler{
 		results: []PageStatus{
-			{ResourceType: "page", StatusCode: 200, ContentType: "text/html", Title: "short", H1Count: 0},
-			{ResourceType: "image", StatusCode: 200, Size: 100},
+			{
+				ResourceType: "page",
+				StatusCode:   200,
+				ContentType:  "text/html",
+				Title:        "short",
+				H1Count:      0,
+				LoadTime:     4 * time.Second,
+			},
+			{
+				ResourceType: "image",
+				StatusCode:   200,
+				Size:         100,
+				LoadTime:     4 * time.Second,
+			},
 		},
 	}
 	audit := c.analyzeResults()
