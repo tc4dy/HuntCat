@@ -49,78 +49,78 @@ func displaySummaryReport(audit *AuditResult) {
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 
-	fmt.Fprintln(w, colorBoldGreen+"METRIC\tVALUE\tSTATUS"+colorReset)
-	fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
+	_, _ = fmt.Fprintln(w, colorBoldGreen+"METRIC\tVALUE\tSTATUS"+colorReset)
+	_, _ = fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
 
-	fmt.Fprintf(w, "Total Resources Scanned\t%d\t%s[+] Complete%s\n", audit.TotalScanned, colorGreen, colorReset)
+	_, _ = fmt.Fprintf(w, "Total Resources Scanned\t%d\t%s[+] Complete%s\n", audit.TotalScanned, colorGreen, colorReset)
 
 	if len(audit.BrokenLinks) > 0 {
-		fmt.Fprintf(w, "Broken Links (404)\t%d\t%s[-] Critical%s\n", len(audit.BrokenLinks), colorRed, colorReset)
+		_, _ = fmt.Fprintf(w, "Broken Links (404)\t%d\t%s[-] Critical%s\n", len(audit.BrokenLinks), colorRed, colorReset)
 	} else {
-		fmt.Fprintf(w, "Broken Links (404)\t%d\t%s[+] Excellent%s\n", len(audit.BrokenLinks), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Broken Links (404)\t%d\t%s[+] Excellent%s\n", len(audit.BrokenLinks), colorGreen, colorReset)
 	}
 
 	if len(audit.ServerErrors) > 0 {
-		fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s[-] Critical%s\n", len(audit.ServerErrors), colorBoldRed, colorReset)
+		_, _ = fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s[-] Critical%s\n", len(audit.ServerErrors), colorBoldRed, colorReset)
 	} else {
-		fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s[+] Excellent%s\n", len(audit.ServerErrors), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Server Errors (5xx)\t%d\t%s[+] Excellent%s\n", len(audit.ServerErrors), colorGreen, colorReset)
 	}
 
 	if len(audit.RedirectChains) > 0 {
-		fmt.Fprintf(w, "Redirect Chains\t%d\t%s[!] Warning%s\n", len(audit.RedirectChains), colorYellow, colorReset)
+		_, _ = fmt.Fprintf(w, "Redirect Chains\t%d\t%s[!] Warning%s\n", len(audit.RedirectChains), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Redirect Chains\t%d\t%s[+] Good%s\n", len(audit.RedirectChains), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Redirect Chains\t%d\t%s[+] Good%s\n", len(audit.RedirectChains), colorGreen, colorReset)
 	}
 
 	if len(audit.CriticalAssets) > 0 {
-		fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s[!] URGENT%s\n", len(audit.CriticalAssets), colorBoldRed, colorReset)
+		_, _ = fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s[!] URGENT%s\n", len(audit.CriticalAssets), colorBoldRed, colorReset)
 	} else {
-		fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s[+] Excellent%s\n", len(audit.CriticalAssets), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Critical Images (>2MB)\t%d\t%s[+] Excellent%s\n", len(audit.CriticalAssets), colorGreen, colorReset)
 	}
 
 	if len(audit.WarningAssets) > 0 {
-		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[!] Optimize%s\n", len(audit.WarningAssets), colorOrange, colorReset)
+		_, _ = fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[!] Optimize%s\n", len(audit.WarningAssets), colorOrange, colorReset)
 	} else {
-		fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[+] Good%s\n", len(audit.WarningAssets), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Large Images (>1MB)\t%d\t%s[+] Good%s\n", len(audit.WarningAssets), colorGreen, colorReset)
 	}
 
 	if len(audit.AdviceAssets) > 0 {
-		fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s[*] Consider%s\n", len(audit.AdviceAssets), colorYellow, colorReset)
+		_, _ = fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s[*] Consider%s\n", len(audit.AdviceAssets), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s[+] Good%s\n", len(audit.AdviceAssets), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Medium Images (>700KB)\t%d\t%s[+] Good%s\n", len(audit.AdviceAssets), colorGreen, colorReset)
 	}
 
 	if len(audit.DuplicateContent) > 0 {
-		fmt.Fprintf(w, "Duplicate Content\t%d\t%s[!] SEO Issue%s\n", len(audit.DuplicateContent), colorYellow, colorReset)
+		_, _ = fmt.Fprintf(w, "Duplicate Content\t%d\t%s[!] SEO Issue%s\n", len(audit.DuplicateContent), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Duplicate Content\t%d\t%s[+] Excellent%s\n", len(audit.DuplicateContent), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Duplicate Content\t%d\t%s[+] Excellent%s\n", len(audit.DuplicateContent), colorGreen, colorReset)
 	}
 
 	if len(audit.NonHTTPS) > 0 {
-		fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s[!] Security Risk%s\n", len(audit.NonHTTPS), colorOrange, colorReset)
+		_, _ = fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s[!] Security Risk%s\n", len(audit.NonHTTPS), colorOrange, colorReset)
 	} else {
-		fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s[+] Secure%s\n", len(audit.NonHTTPS), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Non-HTTPS Pages\t%d\t%s[+] Secure%s\n", len(audit.NonHTTPS), colorGreen, colorReset)
 	}
 
 	if len(audit.MissingMetaTags) > 0 {
-		fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s[!] SEO Issue%s\n", len(audit.MissingMetaTags), colorYellow, colorReset)
+		_, _ = fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s[!] SEO Issue%s\n", len(audit.MissingMetaTags), colorYellow, colorReset)
 	} else {
-		fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s[+] Good%s\n", len(audit.MissingMetaTags), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Missing/Poor Meta Tags\t%d\t%s[+] Good%s\n", len(audit.MissingMetaTags), colorGreen, colorReset)
 	}
 
 	if len(audit.SitemapURLs) > 0 {
-		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[+] Detected%s\n", len(audit.SitemapURLs), colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[+] Detected%s\n", len(audit.SitemapURLs), colorGreen, colorReset)
 	} else {
-		fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[!] Not Found%s\n", len(audit.SitemapURLs), colorYellow, colorReset)
+		_, _ = fmt.Fprintf(w, "Sitemap URLs Found\t%d\t%s[!] Not Found%s\n", len(audit.SitemapURLs), colorYellow, colorReset)
 	}
 
 	if audit.RobotsFound {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[+] Found%s\n", colorGreen, colorReset)
+		_, _ = fmt.Fprintf(w, "Robots.txt Status\t-\t%s[+] Found%s\n", colorGreen, colorReset)
 	} else {
-		fmt.Fprintf(w, "Robots.txt Status\t-\t%s[!] Not Found%s\n", colorYellow, colorReset)
+		_, _ = fmt.Fprintf(w, "Robots.txt Status\t-\t%s[!] Not Found%s\n", colorYellow, colorReset)
 	}
 
-	fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
+	_, _ = fmt.Fprintln(w, "────────────────────────────\t────────\t────────────────")
 
 	healthColor := colorGreen
 	healthStatus := "Excellent"
@@ -134,7 +134,7 @@ func displaySummaryReport(audit *AuditResult) {
 		healthColor = colorYellow
 		healthStatus = "Good"
 	}
-	fmt.Fprintf(w, "Site Health Score\t%.1f%%\t%s%s%s\n", audit.HealthScore, healthColor, healthStatus, colorReset)
+	_, _ = fmt.Fprintf(w, "Site Health Score\t%.1f%%\t%s%s%s\n", audit.HealthScore, healthColor, healthStatus, colorReset)
 
 	seoColor := colorGreen
 	seoStatus := "Excellent"
@@ -148,7 +148,7 @@ func displaySummaryReport(audit *AuditResult) {
 		seoColor = colorYellow
 		seoStatus = "Good"
 	}
-	fmt.Fprintf(w, "SEO Score\t%.1f%%\t%s%s%s\n", audit.SEOScore, seoColor, seoStatus, colorReset)
+	_, _ = fmt.Fprintf(w, "SEO Score\t%.1f%%\t%s%s%s\n", audit.SEOScore, seoColor, seoStatus, colorReset)
 
 	perfColor := colorGreen
 	perfStatus := "Excellent"
@@ -162,7 +162,7 @@ func displaySummaryReport(audit *AuditResult) {
 		perfColor = colorYellow
 		perfStatus = "Good"
 	}
-	fmt.Fprintf(w, "Performance Score\t%.1f%%\t%s%s%s\n", audit.PerformanceScore, perfColor, perfStatus, colorReset)
+	_, _ = fmt.Fprintf(w, "Performance Score\t%.1f%%\t%s%s%s\n", audit.PerformanceScore, perfColor, perfStatus, colorReset)
 
 	secColor := colorGreen
 	secStatus := "Secure"
@@ -176,9 +176,9 @@ func displaySummaryReport(audit *AuditResult) {
 		secColor = colorYellow
 		secStatus = "Fair"
 	}
-	fmt.Fprintf(w, "Security Score\t%.1f%%\t%s%s%s\n", audit.SecurityScore, secColor, secStatus, colorReset)
+	_, _ = fmt.Fprintf(w, "Security Score\t%.1f%%\t%s%s%s\n", audit.SecurityScore, secColor, secStatus, colorReset)
 
-	w.Flush()
+	_ = w.Flush()
 
 	fmt.Println()
 	fmt.Println(colorCyan + "═══════════════════════════════════════════════════════════════════════════════" + colorReset)
@@ -529,7 +529,7 @@ func exportCSVReport(audit *AuditResult) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	writer := csv.NewWriter(file)
 
