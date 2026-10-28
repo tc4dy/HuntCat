@@ -356,8 +356,12 @@ const (
 - **No SPA support:** Single Page Applications that load content dynamically via API calls will not be fully crawled.
 - **`robots.txt` is advisory:** HuntCat respects `robots.txt` rules per RFC 9309 by default but does not enforce `Crawl-delay` directives — use `rateLimitDelay` in constants instead.
 
----
+## [<>] **Other Related Projects**
 
-### **License**
+### [**PrivMeta**](https://github.com/tc4dy/privmeta)
 
-This project is licensed under the [MIT License](LICENSE).
+A local-first CLI privacy tool designed to inspect, clean, and spoof metadata across digital files. Remove GPS tracking information and hidden metadata from images, PDFs, and video files, or inject realistic camera profiles and city coordinates for controlled metadata customization. PrivMeta also features anti-forensic shredding, bulk folder processing, timeline simulation, and a privacy-focused design with zero telemetry.
+
+### [**Godas**](https://github.com/tc4dy/godas)
+
+Godas is a high-performance columnar data analysis library for Go, offering typed Series, expressive filter expressions, concurrent GroupBy aggregation, hash joins, and CSV/JSON/NDJSON/Parquet I/O through one coherent, idiomatic API. Built for production workloads where type safety, null semantics, and raw throughput matter equally.
