@@ -16,6 +16,7 @@
 [![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
 
 *"Leave your cats in the area and enjoy!"*
+---
 [![CI](https://github.com/tc4dy/HuntCat/actions/workflows/ci.yml/badge.svg?style=for-the-badge)](https://github.com/tc4dy/HuntCat/actions/workflows/ci.yml)
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Reports](#-reports) • [Structure](#-repository-structure)
