@@ -1,11 +1,14 @@
 ![HuntCat Banner](huntcat-banner.svg)
 
 # HuntCat [![Awesome Go](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/avelino/awesome-go)
+
 **Enterprise-Grade Web Audit & SEO Crawler**
 
 ## **Warning!**
+
 **(With Modular & Standalone Modes for developers and users.)**
-**huntcat.go** is intended for regular users. If you're a developer and want to explore the code more thoroughly, you can access the main file structure in the **"For Developers (Discrete Modular)"** folder.
+
+**`huntcat.go`** is intended for regular users. If you're a developer and want to explore the code more thoroughly, you can access the main file structure in the **"For Developers (Discrete Modular)"** folder.
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -38,6 +41,7 @@
 ## [$] **Features**
 
 ### [+] **Advanced Crawling**
+
 - Recursive link discovery with intelligent depth control
 - Concurrent processing (up to 50 workers by default)
 - Sitemap index parsing (recursive)
@@ -46,6 +50,7 @@
 - Image asset optimization analysis
 
 ### [+] **Health Monitoring**
+
 - **404 Detection**: Broken link identification
 - **5xx Errors**: Server-side issue tracking
 - **Redirect Chains**: Accurate 301/302 counting via Context
@@ -53,6 +58,7 @@
 - **Load Time Tracking**: Per-resource performance metrics
 
 ### [+] **SEO Audit Engine**
+
 - Title tag validation (optimal: 50-60 chars)
 - Meta description analysis (optimal: up to 160 chars)
 - H1 tag counting (best practice: exactly 1)
@@ -62,6 +68,7 @@
 - Meta robots tag inspection
 
 ### [+] **Security & Reliability Checks**
+
 - HTTPS enforcement validation
 - HTTP/2 protocol detection
 - TLS version verification (>= 1.2)
@@ -70,22 +77,23 @@
 - Memory pruning (Prevents leaks on large crawls)
 
 ### [+] **Intelligent Scoring**
-```
-Health Score = (100 - error_rate)
-SEO Score = Meta tag compliance + structural quality (HTML pages only)
-Performance Score = Asset optimization + load times
-Security Score = HTTPS coverage + TLS compliance
-```
+
+- **Health Score** = (100 - error_rate)
+- **SEO Score** = Meta tag compliance + structural quality (HTML pages only)
+- **Performance Score** = Asset optimization + load times
+- **Security Score** = HTTPS coverage + TLS compliance
 
 ---
 
 ## [<>] **Installation**
 
 ### **Prerequisites**
+
 - [Go 1.21+](https://go.dev/dl/) installed
 - Terminal/Command Prompt access
 
 ### **Quick Install (Standalone for Users)**
+
 ```bash
 # Clone the repository
 git clone https://github.com/tc4dy/HuntCat.git
@@ -105,7 +113,8 @@ go build -ldflags="-s -w" -o huntcat huntcat.go
 ./huntcat https://example.com
 ```
 
-### For Developers (Discrete Modular)
+### **For Developers (Discrete Modular)**
+
 ```bash
 # From the root directory
 cd "For Developers (Discrete Modular)"
@@ -121,16 +130,11 @@ go build -ldflags="-s -w" -o huntcat .
 ./huntcat https://example.com
 ```
 
-### **One-Liner Install (Unix/Linux/macOS)**
-```bash
-curl -sSL https://raw.githubusercontent.com/tc4dy/HuntCat/main/huntcat.go -o huntcat.go
-```
-
 ---
 
-## [<\>] **Usage**
+## [<>] **Usage**
 
-HuntCat ships in two forms: a **Standalone** single file for end users, and a **Discrete Modular** structure for developers. Both are functionally identical — the same Go code, just organized differently.
+HuntCat ships in two forms: a Standalone single file for end users, and a Discrete Modular structure for developers. Both are functionally identical — the same Go code, just organized differently.
 
 ### **Standalone (End Users)**
 
@@ -145,23 +149,6 @@ go build -ldflags="-s -w" -o huntcat huntcat.go
 ./huntcat https://example.com
 ```
 
-**Authentication & Custom Headers:**
-```bash
-# With authentication cookie
-go run huntcat.go https://example.com --cookie="session=abc123"
-
-# With Bearer token
-go run huntcat.go https://example.com --token="eyJhbGci..."
-
-# With custom header
-go run huntcat.go https://example.com --header="X-API-Key: mykey"
-
-# Multiple custom headers (repeatable)
-go run huntcat.go https://example.com --header="X-Foo: bar" --header="X-Baz: qux"
-```
-
----
-
 ### **Discrete Modular (Developers)**
 
 The `For Developers (Discrete Modular)/` folder contains the same application split across multiple files by responsibility. This is the recommended structure if you want to contribute, extend, or understand the internals.
@@ -171,56 +158,67 @@ cd "For Developers (Discrete Modular)"
 go run *.go https://example.com
 ```
 
-**Authentication & Custom Headers work identically:**
-```bash
-go run *.go https://example.com --cookie="session=abc123"
-go run *.go https://example.com --token="eyJhbGci..."
-go run *.go https://example.com --header="X-API-Key: mykey"
-```
+### **Authentication & Custom Headers**
 
----
+Both versions support the same flags for accessing protected or custom endpoints:
+
+```bash
+# With authentication cookie
+go run huntcat.go https://example.com --cookie="session=abc123"
+
+# With Bearer token
+go run huntcat.go https://example.com --token="eyJhbGci..."
+
+# With custom header (repeatable)
+go run huntcat.go https://example.com --header="X-API-Key: mykey" --header="X-Foo: bar"
+```
 
 ### **All Available Options**
 
 | Flag | Description | Example |
-|------|-------------|---------|
+|---|---|---|
 | `--cookie=<value>` | Set authentication cookie | `--cookie="session=abc123"` |
 | `--token=<value>` | Set Bearer token (Authorization header) | `--token="eyJhbGci..."` |
 | `--header=<k:v>` | Add a custom HTTP header (repeatable) | `--header="X-Key: val"` |
+| `-h, --help` | Show help message | `huntcat -h` |
 
 ---
 
 ## [!] **Reports**
 
-HuntCat generates **2 comprehensive reports** after each scan:
+HuntCat generates 2 comprehensive reports after each scan:
 
-### 1. **HTML Report** (`huntcat_report.html`)
+### **1. HTML Report (`huntcat_report.html`)**
+
 - Beautiful gradient design
 - Visual score cards (Health, SEO, Performance, Security)
 - Interactive issue tables
 - Filterable by priority
 
-**Preview:**
-```
+#### Preview
+
+```text
 +------------------------------------------+
-|  Health Score:       100%  Excellent      |
-|  SEO Score:           45%  Needs Work     |
+|  Health Score:       100%  Excellent     |
+|  SEO Score:           45%  Needs Work    |
 |  Performance Score:   92%  Good           |
-|  Security Score:     100%  Secure         |
+|  Security Score:     100%  Secure        |
 +------------------------------------------+
 ```
 
-### 2. **CSV Export** (`huntcat_report.csv`)
+### **2. CSV Export (`huntcat_report.csv`)**
+
 - Import to Excel/Google Sheets
 - Raw data for custom analysis
-- Columns: URL, Type, Status, Size, HTTPS, HTTP Version, Title, Description, H1 Count, Canonical, Load Time, Issue
+- **Columns:** URL, Type, Status, Size, HTTPS, HTTP Version, Title, Description, H1 Count, Canonical, Load Time, Issue
 
 ---
 
 ## [ARC] **Architecture**
 
 ### **Core Components**
-```
+
+```text
 +----------------------------------------------------------+
 |                    HuntCat Engine                        |
 +----------------------------------------------------------+
@@ -240,18 +238,21 @@ HuntCat generates **2 comprehensive reports** after each scan:
 ```
 
 ### **Tech Stack**
-- **Language**: Go 1.22+ (Pure standard library + golang.org/x/net/html)
-- **Concurrency**: Goroutines, WaitGroups, Mutexes, Channels
-- **HTTP Client**: Custom HTTP/2 client with TLS 1.2+ enforcement
-- **Parsing**: golang.org/x/net/html for robust HTML parsing
-- **Hashing**: SHA-256 for duplicate content detection
+
+- **Language:** Go 1.21+ (Standard library + `golang.org/x/net/html`)
+- **Concurrency:** Goroutines, WaitGroups, Mutexes, Channels, Atomic
+- **HTTP Client:** Custom HTTP/2 client with TLS 1.2+ enforcement
+- **Parsing:** `golang.org/x/net/html` for robust HTML parsing
+- **Hashing:** SHA-256 for duplicate content detection
+- **Decompression:** Native Go gzip handling (no manual encoding bugs)
 
 ---
 
 ## [<>] **Examples**
 
-### Terminal Output
-```
+### **Terminal Output**
+
+```text
   ██╗  ██╗██╗   ██╗███╗   ██╗████████╗ ██████╗ █████╗ ████████╗
   ...
 
@@ -262,10 +263,10 @@ Enforcing rate limiting (100ms/request)...
 
 Starting deep crawl with SEO analysis...
 
-[✓ 200] https://example.com
-[✓ 200] https://example.com/about
-[✗ 404] https://example.com/missing-page
-[⚠ IMG] https://example.com/huge-image.jpg - WARNING: 2.5 MB
+[+] 200 https://example.com [page]
+[+] 200 https://example.com/about [page]
+[-] 404 https://example.com/missing-page [page]
+[!] IMG https://example.com/huge-image.jpg - WARNING: 2.5 MB
 
 ╔═══════════════════════════════════════════════════════╗
 ║              HUNTCAT AUDIT REPORT                     ║
@@ -282,46 +283,56 @@ HTML report saved: huntcat_report.html
 CSV report saved: huntcat_report.csv
 ```
 
-## Repository Structure
+### **Repository Structure**
 
-- HuntCat/
-  - huntcat.go — Standalone version (for end users)
-  - For Developers (Discrete Modular)/
-    - main.go — Entry point
-    - crawler.go — Crawling engine
-    - constants.go — Configuration constants
-    - colors.go — Terminal color definitions
-    - page_status.go — Data structures
-    - http_client.go — HTTP client & user agents
-    - parsers.go — HTML parsing & SEO analysis
-    - reports.go — HTML, CSV & console reports
-    - utils.go — Helper functions
-    - go.mod — Go module dependencies
-    - go.sum — Dependency checksums
-    - README.txt — Warning for developers
-  - README.md — Main documentation
-  - LICENSE — MIT License
-  - .gitignore — Git ignore rules
-  - huntcat-banner.svg — Project banner
+```text
+HuntCat/
+├── README.md — Main documentation
+├── LICENSE — MIT License
+├── .gitignore — Git ignore rules
+├── huntcat-banner.svg — Project banner
+├── .github/
+│   └── workflows/
+│       └── ci.yml — CI Pipeline (Build, Vet, Test, Lint)
+├── Standalone (Single File for Users)/
+│   ├── huntcat.go — Standalone version (for end users)
+│   ├── go.mod — Go module definition
+│   └── go.sum — Dependency checksums
+└── For Developers (Discrete Modular)/
+    ├── main.go — Entry point
+    ├── crawler.go — Crawling engine
+    ├── constants.go — Configuration constants
+    ├── colors.go — Terminal color definitions
+    ├── page_status.go — Data structures
+    ├── http_client.go — HTTP client & user agents
+    ├── parsers.go — HTML parsing & SEO analysis
+    ├── reports.go — HTML, CSV & console reports
+    ├── utils.go — Helper functions
+    ├── crawler_test.go — Unit tests for crawler
+    ├── parsers_test.go — Unit tests for parsers
+    ├── go.mod — Go module dependencies
+    ├── go.sum — Dependency checksums
+    └── .golangci.yml — Linter configuration
+```
 
 ### **File Descriptions**
 
 | File | Description |
-|------|-------------|
-| `huntcat.go` | **Standalone** - Single file, download and run with `go run huntcat.go <url>` |
-| `For Developers (Discrete Modular)/` | **Modular source** - Run with `go run *.go <url>`, for contributors and curious developers |
-| `go.mod` | Go module definition and external dependencies |
-| `go.sum` | Dependency checksums for reproducible builds |
-| `README.md` | Documentation — you're reading it! |
-| `LICENSE` | MIT License — open source, free to use |
-| `.gitignore` | Keeps the repo clean |
-| `huntcat-banner.svg` | Project banner / visual identity |
+|---|---|
+| `Standalone (Single File for Users)/huntcat.go` | Standalone version — run with `go run huntcat.go <url>`. |
+| `For Developers (Discrete Modular)/` | Modular source — run with `go run *.go <url>`, for contributors and developers exploring the code. |
+| `go.mod` / `go.sum` | Go module definition and dependency checksums for reproducible builds. |
+| `README.md` | Project documentation — you're reading it! |
+| [`LICENSE`](LICENSE) | MIT License — open source, free to use under its terms. |
+| `.gitignore` | Keeps unwanted files out of version control. |
+| `.github/workflows/ci.yml` | Automated CI pipeline for Build, Vet, Test, and Lint. |
+| `huntcat-banner.svg` | Project banner and visual identity. |
 
 ---
 
 ## [^_^] **Configuration**
 
-Edit constants in `huntcat.go` (or `constants.go` in the modular version) to customize behavior:
+Edit constants in `constants.go` (or `huntcat.go` in the standalone version) to customize behavior:
 
 ```go
 const (
@@ -338,16 +349,14 @@ const (
 )
 ```
 
----
+### **Known Limitations**
 
-## **Known Limitations**
-
-- **No JavaScript rendering**: HuntCat fetches raw HTML. Pages that require JavaScript to render content (SPAs, React/Vue/Angular apps) will return incomplete results.
-- **No SPA support**: Single Page Applications that load content dynamically via API calls will not be fully crawled.
-- **robots.txt is advisory**: HuntCat respects `robots.txt` rules by default but does not enforce `Crawl-delay` directives — use `rateLimitDelay` in constants instead.
+- **No JavaScript rendering:** HuntCat fetches raw HTML. Pages that require JavaScript to render content (SPAs, React/Vue/Angular apps) will return incomplete results.
+- **No SPA support:** Single Page Applications that load content dynamically via API calls will not be fully crawled.
+- **`robots.txt` is advisory:** HuntCat respects `robots.txt` rules per RFC 9309 by default but does not enforce `Crawl-delay` directives — use `rateLimitDelay` in constants instead.
 
 ---
 
-## **License**
+### **License**
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
