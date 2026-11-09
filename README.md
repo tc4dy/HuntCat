@@ -12,8 +12,8 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](https://github.com)
-[![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-purple?style=for-the-badge)](https://github.com)
+[![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-pink?style=for-the-badge)](https://github.com/tc4dy/HuntCat)
 
 *"Leave your cats in the area and enjoy!"*
 ---
