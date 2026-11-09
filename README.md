@@ -358,7 +358,7 @@ const (
 
 ## [<>] **Other Related Projects**
 
-### [**PrivMeta**](https://github.com/tc4dy/privmeta)
+### [**VynMeta**](https://github.com/tc4dy/vynmeta)
 
 A local-first CLI privacy tool designed to inspect, clean, and spoof metadata across digital files. Remove GPS tracking information and hidden metadata from images, PDFs, and video files, or inject realistic camera profiles and city coordinates for controlled metadata customization. PrivMeta also features anti-forensic shredding, bulk folder processing, timeline simulation, and a privacy-focused design with zero telemetry.
 
