@@ -2,7 +2,7 @@
 
 # HuntCat [![Awesome Go](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/avelino/awesome-go)
 
-**Enterprise-Grade Web Audit & SEO Crawler**
+**MVP (Minimum Viable Product) Web Audit & SEO Crawler**
 
 ## **Warning!**
 
@@ -30,7 +30,7 @@
 ### Why HuntCat?
 
 - [+] **Ultra-Fast**: Concurrent crawling with 50+ workers
-- [+] **Beautiful Reports**: Professional HTML + CSV exports
+- [+] **Reports**: HTML + CSV exports
 - [+] **Security-First**: TLS 1.2+, HTTP/2 support, HTTPS validation
 - [+] **SEO Intelligence**: Meta tags, canonicals, structured data detection
 - [+] **Polite Crawling**: RFC 9309 compliant `robots.txt` handling, rate limiting
